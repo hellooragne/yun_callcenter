@@ -6,5 +6,5 @@
 #define CC_AGENT_TYPE_UUID_STANDBY "uuid-standby"
 #define CALLCENTER_EVENT "callcenter::info"
 
-const char *global_cf = "callcenter.conf";
+const static char *global_cf = "callcenter.conf";
 #endif

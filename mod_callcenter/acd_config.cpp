@@ -1,5 +1,38 @@
 #include "acd_config.h"
 
+#define CC_CONFIG_API_SYNTAX "callcenter_config <target> <args>,\n"\
+"\tcallcenter_config agent add [name] [type] | \n" \
+"\tcallcenter_config agent del [name] | \n" \
+"\tcallcenter_config agent set status [agent_name] [status] | \n" \
+"\tcallcenter_config agent set state [agent_name] [state] | \n" \
+"\tcallcenter_config agent set contact [agent_name] [contact] | \n" \
+"\tcallcenter_config agent set ready_time [agent_name] [wait till epoch] | \n"\
+"\tcallcenter_config agent set reject_delay_time [agent_name] [wait second] | \n"\
+"\tcallcenter_config agent set busy_delay_time [agent_name] [wait second] | \n"\
+"\tcallcenter_config agent set no_answer_delay_time [agent_name] [wait second] | \n"\
+"\tcallcenter_config agent get status [agent_name] | \n" \
+"\tcallcenter_config agent get state [agent_name] | \n" \
+"\tcallcenter_config agent get uuid [agent_name] | \n" \
+"\tcallcenter_config agent list [[agent_name]] | \n" \
+"\tcallcenter_config tier add [queue_name] [agent_name] [level] [position] | \n" \
+"\tcallcenter_config tier set state [queue_name] [agent_name] [state] | \n" \
+"\tcallcenter_config tier set level [queue_name] [agent_name] [level] | \n" \
+"\tcallcenter_config tier set position [queue_name] [agent_name] [position] | \n" \
+"\tcallcenter_config tier del [queue_name] [agent_name] | \n" \
+"\tcallcenter_config tier list | \n" \
+"\tcallcenter_config queue load [queue_name] | \n" \
+"\tcallcenter_config queue unload [queue_name] | \n" \
+"\tcallcenter_config queue reload [queue_name] | \n" \
+"\tcallcenter_config queue list | \n" \
+"\tcallcenter_config queue list agents [queue_name] [status] | \n" \
+"\tcallcenter_config queue list members [queue_name] | \n" \
+"\tcallcenter_config queue list tiers [queue_name] | \n" \
+"\tcallcenter_config queue count | \n" \
+"\tcallcenter_config queue count agents [queue_name] [status] | \n" \
+"\tcallcenter_config queue count members [queue_name] | \n" \
+"\tcallcenter_config queue count tiers [queue_name]"
+
+
 static char agents_sql[] =
 "CREATE TABLE agents (\n"
 "   name      VARCHAR(255),\n"
@@ -73,7 +106,32 @@ static char members_sql[] =
 "   serving_system   VARCHAR(255),\n"
 "   state	     VARCHAR(255)\n" ");\n";
 
+static int list_result_callback(void *pArg, int argc, char **argv, char **columnNames)
+{
+	struct list_result *cbt = (struct list_result *) pArg;
+	int i = 0;
 
+	cbt->row_process++;
+
+	if (cbt->row_process == 1) {
+		for ( i = 0; i < argc; i++) {
+			cbt->stream->write_function(cbt->stream,"%s", columnNames[i]);
+			if (i < argc - 1) {
+				cbt->stream->write_function(cbt->stream,"|");
+			}
+		}  
+		cbt->stream->write_function(cbt->stream,"\n");
+
+	}
+	for ( i = 0; i < argc; i++) {
+		cbt->stream->write_function(cbt->stream,"%s", argv[i]);
+		if (i < argc - 1) {
+			cbt->stream->write_function(cbt->stream,"|");
+		}
+	}
+	cbt->stream->write_function(cbt->stream,"\n");
+	return 0;
+}
 
 
 
@@ -584,42 +642,9 @@ done:
 	return SWITCH_STATUS_SUCCESS;
 }
 
-#define CC_CONFIG_API_SYNTAX "callcenter_config <target> <args>,\n"\
-"\tcallcenter_config agent add [name] [type] | \n" \
-"\tcallcenter_config agent del [name] | \n" \
-"\tcallcenter_config agent set status [agent_name] [status] | \n" \
-"\tcallcenter_config agent set state [agent_name] [state] | \n" \
-"\tcallcenter_config agent set contact [agent_name] [contact] | \n" \
-"\tcallcenter_config agent set ready_time [agent_name] [wait till epoch] | \n"\
-"\tcallcenter_config agent set reject_delay_time [agent_name] [wait second] | \n"\
-"\tcallcenter_config agent set busy_delay_time [agent_name] [wait second] | \n"\
-"\tcallcenter_config agent set no_answer_delay_time [agent_name] [wait second] | \n"\
-"\tcallcenter_config agent get status [agent_name] | \n" \
-"\tcallcenter_config agent get state [agent_name] | \n" \
-"\tcallcenter_config agent get uuid [agent_name] | \n" \
-"\tcallcenter_config agent list [[agent_name]] | \n" \
-"\tcallcenter_config tier add [queue_name] [agent_name] [level] [position] | \n" \
-"\tcallcenter_config tier set state [queue_name] [agent_name] [state] | \n" \
-"\tcallcenter_config tier set level [queue_name] [agent_name] [level] | \n" \
-"\tcallcenter_config tier set position [queue_name] [agent_name] [position] | \n" \
-"\tcallcenter_config tier del [queue_name] [agent_name] | \n" \
-"\tcallcenter_config tier list | \n" \
-"\tcallcenter_config queue load [queue_name] | \n" \
-"\tcallcenter_config queue unload [queue_name] | \n" \
-"\tcallcenter_config queue reload [queue_name] | \n" \
-"\tcallcenter_config queue list | \n" \
-"\tcallcenter_config queue list agents [queue_name] [status] | \n" \
-"\tcallcenter_config queue list members [queue_name] | \n" \
-"\tcallcenter_config queue list tiers [queue_name] | \n" \
-"\tcallcenter_config queue count | \n" \
-"\tcallcenter_config queue count agents [queue_name] [status] | \n" \
-"\tcallcenter_config queue count members [queue_name] | \n" \
-"\tcallcenter_config queue count tiers [queue_name]"
 
 
-
-int acd_config_init(switch_application_interface_t *app_interface) {
-	SWITCH_ADD_APP(app_interface, "callcenter", "CallCenter", CC_DESC, callcenter_function, CC_USAGE, SAF_NONE);
+int acd_config_init(switch_loadable_module_interface_t **module_interface, switch_api_interface_t *api_interface) {
 	SWITCH_ADD_API(api_interface, "callcenter_config", "Config of callcenter", cc_config_api_function, CC_CONFIG_API_SYNTAX);
 
 	switch_console_set_complete("add callcenter_config agent add");

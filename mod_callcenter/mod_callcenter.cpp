@@ -280,7 +280,8 @@ static void *SWITCH_THREAD_FUNC outbound_agent_thread_run(switch_thread_t *threa
 			if (atoi(res) == 0) {
 				goto done;
 			}
-			switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", h->member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL);
+			//switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", h->member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL);
+			switch_core_session_hupall_matching_var_ans("cc_member_pre_answer_uuid", h->member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL, (switch_hup_type_t)SHT_UNANSWERED | SHT_ANSWERED);
 
 		}
 		t_agent_answered = local_epoch_time_now(NULL);
@@ -651,7 +652,7 @@ static int agents_callback(void *pArg, int argc, char **argv, char **columnNames
 				struct call_helper *h;
 
 				switch_core_new_memory_pool(&pool);
-				h = switch_core_alloc(pool, sizeof(*h));
+				h = (struct call_helper *)switch_core_alloc(pool, sizeof(*h));
 				h->pool = pool;
 				h->member_uuid = switch_core_strdup(h->pool, cbt->member_uuid);
 				h->member_session_uuid = switch_core_strdup(h->pool, cbt->member_session_uuid);
@@ -1247,7 +1248,7 @@ SWITCH_STANDARD_APP(callcenter_function)
 
 	/* Start Thread that will playback different prompt to the channel */
 	switch_core_new_memory_pool(&pool);
-	h = switch_core_alloc(pool, sizeof(*h));
+	h = (struct member_thread_helper *)switch_core_alloc(pool, sizeof(*h));
 
 	h->pool = pool;
 	h->member_uuid = switch_core_strdup(h->pool, member_uuid);
@@ -1283,7 +1284,7 @@ SWITCH_STANDARD_APP(callcenter_function)
 		args.buflen = sizeof(h);
 
 		/* An agent was found, time to exit and let the bridge do it job */
-		if ((p = switch_channel_get_variable(member_channel, "cc_agent_found")) && (agent_found = switch_true(p))) {
+		if ((p = switch_channel_get_variable(member_channel, "cc_agent_found")) && (agent_found = (switch_bool_t)switch_true(p))) {
 			break;
 		}
 		/* If the member thread set a different reason, we monitor it so we can quit the wait */
@@ -1319,7 +1320,7 @@ SWITCH_STANDARD_APP(callcenter_function)
 
 	/* Make sure an agent was found, as we might break above without setting it */
 	if (!agent_found && (p = switch_channel_get_variable(member_channel, "cc_agent_found"))) {
-		agent_found = switch_true(p);
+		agent_found = (switch_bool_t)switch_true(p);
 	}
 
 	/* Stop member thread */

@@ -138,6 +138,7 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 				switch_safe_free(sql);
 				if (!switch_strlen_zero(res)) {
 
+					/*hmeng*/
 					switch_core_session_hupall_matching_var_ans("cc_member_pre_answer_uuid", res, SWITCH_CAUSE_ORIGINATOR_CANCEL, (switch_hup_type_t) (SHT_UNANSWERED | SHT_ANSWERED));
 				}
 			}

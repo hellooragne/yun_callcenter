@@ -60,4 +60,5 @@ cc_queue_t *load_queue(const char *queue_name);
 cc_queue_t *get_queue(const char *queue_name);
 
 
+int cc_queue_count(const char *queue);
 #endif

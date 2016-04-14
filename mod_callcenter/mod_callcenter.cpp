@@ -18,9 +18,6 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_callcenter_load);
  */
 SWITCH_MODULE_DEFINITION(mod_callcenter, mod_callcenter_load, mod_callcenter_shutdown, NULL);
 
-                                                                                             
-
-
 struct globals_type globals;
 
 struct call_helper {
@@ -46,39 +43,6 @@ struct call_helper {
 
 	switch_memory_pool_t *pool;
 };
-
-int cc_queue_count(const char *queue)
-{
-	char *sql;
-	int count = 0;
-	char res[256] = "0";
-	const char *event_name = "Single-Queue";
-	switch_event_t *event;
-
-	if (!switch_strlen_zero(queue)) {
-		if (queue[0] == '*') {
-			event_name = "All-Queues";
-			sql = switch_mprintf("SELECT count(*) FROM members WHERE state = '%q' OR state = '%q'",
-					cc_member_state2str(CC_MEMBER_STATE_WAITING), cc_member_state2str(CC_MEMBER_STATE_TRYING));
-		} else {
-			sql = switch_mprintf("SELECT count(*) FROM members WHERE queue = '%q' AND (state = '%q' OR state = '%q')",
-					queue, cc_member_state2str(CC_MEMBER_STATE_WAITING), cc_member_state2str(CC_MEMBER_STATE_TRYING));
-		}
-		cc_execute_sql2str(NULL, sql, res, sizeof(res));
-		switch_safe_free(sql);
-		count = atoi(res);
-
-		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Queue", queue);
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "members-count");
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Count", res);
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Selection", event_name);
-			switch_event_fire(&event);
-		}
-	}	
-
-	return count;
-}
 
 
 
@@ -281,7 +245,7 @@ static void *SWITCH_THREAD_FUNC outbound_agent_thread_run(switch_thread_t *threa
 				goto done;
 			}
 			//switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", h->member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL);
-			switch_core_session_hupall_matching_var_ans("cc_member_pre_answer_uuid", h->member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL, (switch_hup_type_t)SHT_UNANSWERED | SHT_ANSWERED);
+			switch_core_session_hupall_matching_var_ans("cc_member_pre_answer_uuid", h->member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL, (switch_hup_type_t) (SHT_UNANSWERED | SHT_ANSWERED));  //hmeng
 
 		}
 		t_agent_answered = local_epoch_time_now(NULL);
@@ -1345,7 +1309,8 @@ SWITCH_STANDARD_APP(callcenter_function)
 		switch_safe_free(sql);
 
 		/* Hangup any callback agents  */
-		switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL);
+		//switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL);
+		switch_core_session_hupall_matching_var_ans("cc_member_pre_answer_uuid", member_uuid, SWITCH_CAUSE_ORIGINATOR_CANCEL, (switch_hup_type_t) (SHT_UNANSWERED | SHT_ANSWERED));  //hmeng
 
 		/* Generate an event */
 		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
@@ -1395,8 +1360,6 @@ end:
 
 	return;
 }
-
-
 
 
 
@@ -1485,13 +1448,3 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_callcenter_shutdown)
 	return SWITCH_STATUS_SUCCESS;
 }
 
-/* For Emacs:
- * Local Variables:
- * mode:c
- * indent-tabs-mode:t
- * tab-width:4
- * c-basic-offset:4
- * End:
- * For VIM:
- * vim:set softtabstop=4 shiftwidth=4 tabstop=4 noet
- */

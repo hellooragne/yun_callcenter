@@ -169,3 +169,37 @@ cc_queue_t *get_queue(const char *queue_name)
 
 	return queue;
 }
+
+
+int cc_queue_count(const char *queue)
+{
+	char *sql;
+	int count = 0;
+	char res[256] = "0";
+	const char *event_name = "Single-Queue";
+	switch_event_t *event;
+
+	if (!switch_strlen_zero(queue)) {
+		if (queue[0] == '*') {
+			event_name = "All-Queues";
+			sql = switch_mprintf("SELECT count(*) FROM members WHERE state = '%q' OR state = '%q'",
+					cc_member_state2str(CC_MEMBER_STATE_WAITING), cc_member_state2str(CC_MEMBER_STATE_TRYING));
+		} else {
+			sql = switch_mprintf("SELECT count(*) FROM members WHERE queue = '%q' AND (state = '%q' OR state = '%q')",
+					queue, cc_member_state2str(CC_MEMBER_STATE_WAITING), cc_member_state2str(CC_MEMBER_STATE_TRYING));
+		}
+		cc_execute_sql2str(NULL, sql, res, sizeof(res));
+		switch_safe_free(sql);
+		count = atoi(res);
+
+		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Queue", queue);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "members-count");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Count", res);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Selection", event_name);
+			switch_event_fire(&event);
+		}
+	}	
+
+	return count;
+}

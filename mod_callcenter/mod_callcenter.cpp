@@ -6,8 +6,6 @@
 #include "acd_common.h"
 
 
-
-
 /* Prototypes */
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_callcenter_shutdown);
 SWITCH_MODULE_RUNTIME_FUNCTION(mod_callcenter_runtime);

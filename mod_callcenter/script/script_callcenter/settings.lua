@@ -20,224 +20,168 @@ function get_file_content(file_name)
 end
 
 function load_to_db_init(dbh)
-	local sql_queue = "CREATE TABLE `callout_queue` ("
-	.."`queue_id` int(11) NOT NULL AUTO_INCREMENT,"
-	.."`name` varchar(25) NOT NULL,"
-	.."`authority_name` varchar(25) ,"
-	.."`line_name` varchar(25),"
-	.."`line_point` varchar(25),"
-	.."`line_pri` varchar(25),"
-	.."PRIMARY KEY (`queue_id`),"
-	.."UNIQUE KEY `queue_id_UNIQUE` (`queue_id`)) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COMMENT=''"
 
-	dbh:query("delete from callout_queue")
-	dbh:query(sql_queue)
+	local sql_vdn = "CREATE TABLE vdn ("
+	.."   name     VARCHAR(255),"
+	.."   queue    VARCHAR(255))";
 
-	local sql_phone = "CREATE TABLE `callout_phone` ("
-	.."`phone_id` int(11) NOT NULL AUTO_INCREMENT,"
-	.."`name` varchar(25) NOT NULL,"
-	.."`authority_name` varchar(25) ,"
-	.."`line_name` varchar(25),"
-	.."`line_point` varchar(25),"
-	.."`line_pri` varchar(25),"
-	.."PRIMARY KEY (`phone_id`),"
-	.."UNIQUE KEY `phone_id_UNIQUE` (`phone_id`)) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COMMENT=''"
+	dbh:query("delete from vdn")
 
-	dbh:query("delete from  callout_phone")
-	dbh:query(sql_phone)
+	dbh:test_reactive("SELECT count(*) FROM vdn", "DROP TABLE vdn", sql_vdn)
 
-	local sql_operator = "CREATE TABLE `callout_operator` ("
-	.."`operator_id` int(11) NOT NULL AUTO_INCREMENT,"
-	.."`name` varchar(25) NOT NULL,"
-	.."`authority_name` varchar(25) ,"
-	.."`line_name` varchar(25),"
-	.."`line_point` varchar(25),"
-	.."`line_pri` varchar(25),"
-	.."PRIMARY KEY (`operator_id`),"
-	.."UNIQUE KEY `operator_id_UNIQUE` (`operator_id`)) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COMMENT=''"
 
-	dbh:query("delete from  callout_operator")
-	dbh:query(sql_operator)
+	local sql_queue = "CREATE TABLE cc_queue ("
+	.."   name											VARCHAR(255),"
+	.."   strtegy										VARCHAR(255),"
+	.."   moh_sound										VARCHAR(255),"
+	.."   time_base_score								VARCHAR(255),"
+	.."   max_wait_time									VARCHAR(255),"
+	.."   max_wait_time_with_no_agent     			   	VARCHAR(255),"
+	.."   max_wait_time_with_no_agent_time_reached     	VARCHAR(255),"
+	.."   tier_rules_apply     							VARCHAR(255),"
+	.."   discard_abandoned_after     					VARCHAR(255),"
+	.."   abandoned_resume_allowed     					VARCHAR(255))"
 
-	local sql_authority = "CREATE TABLE `callout_authority` ("
-	.."`authority_id` int(11) NOT NULL AUTO_INCREMENT,"
-	.."`authority_name` varchar(25) ,"
-	.."`authority_value` varchar(25),"
-	.."PRIMARY KEY (`authority_id`),"
-	.."UNIQUE KEY `authority_name_UNIQUE` (`authority_name`)) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COMMENT=''"
+	dbh:query("delete from cc_queue")
 
-	dbh:query("delete from  callout_authority")
-	dbh:query(sql_authority)
+	dbh:test_reactive("SELECT count(*) FROM cc_queue", "DROP TABLE cc_queue", sql_queue)
 
-	local sql_line = "CREATE TABLE `callout_line` ("
-	.."`line_id` int(11) NOT NULL AUTO_INCREMENT,"
-	.."`line_name` varchar(25) ,"
-	.."`caller_number` varchar(25) ,"
-	.."`caller_number_bak` varchar(25) ,"
-	.."`route_code` varchar(25) ,"
-	.."PRIMARY KEY (`line_id`),"
-	.."UNIQUE KEY `line_name_UNIQUE` (`line_name`)) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COMMENT=''"
+	local sql_tiers = "CREATE TABLE tiers ("
+	.."   queue    VARCHAR(255),"
+	.."   agent    VARCHAR(255),"
+	.."   state    VARCHAR(255),"
+	.."   level    INTEGER NOT NULL DEFAULT 1,"
+	.."   position INTEGER NOT NULL DEFAULT 1)"
 
-	dbh:query("delete from callout_line")
-	dbh:query(sql_line)
+	dbh:query("delete from tiers")
 
-	local sql_relation = "CREATE TABLE `callout_relation` ("
-	.."`relation_id` int(11) NOT NULL AUTO_INCREMENT,"
-	.."`queue_name` varchar(25) ,"
-	.."`phone_name` varchar(25) ,"
-	.."`operator_name` varchar(25) ,"
-	.."PRIMARY KEY (`relation_id`),"
-	.."UNIQUE KEY `relation_id_UNIQUE` (`relation_id`)) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COMMENT=''"
+	dbh:test_reactive("SELECT count(*) FROM tiers", "DROP TABLE tiers", sql_tiers)
 
-	dbh:test_reactive("SELECT count(*) FROM callout_relation", "DROP TABLE callout_relation", sql_relation)
+	local sql_agent = "CREATE TABLE agents ("
+	.."   name      VARCHAR(255),"
+	.."   system    VARCHAR(255),"
+	.."   uuid      VARCHAR(255),"
+	.."   type      VARCHAR(255),"
+	.."   contact   VARCHAR(255),"
+	.."   status    VARCHAR(255),"
+	.."   state   VARCHAR(255),"
+	.."   max_no_answer INTEGER NOT NULL DEFAULT 0,"
+	.."   wrap_up_time INTEGER NOT NULL DEFAULT 0,"
+	.."   reject_delay_time INTEGER NOT NULL DEFAULT 0,"
+	.."   busy_delay_time INTEGER NOT NULL DEFAULT 0,"
+	.."   no_answer_delay_time INTEGER NOT NULL DEFAULT 0,"
+	.."   last_bridge_start INTEGER NOT NULL DEFAULT 0,"
+	.."   last_bridge_end INTEGER NOT NULL DEFAULT 0,"
+	.."   last_offered_call INTEGER NOT NULL DEFAULT 0," 
+	.."   last_status_change INTEGER NOT NULL DEFAULT 0,"
+	.."   no_answer_count INTEGER NOT NULL DEFAULT 0,"
+	.."   calls_answered  INTEGER NOT NULL DEFAULT 0,"
+	.."   talk_time  INTEGER NOT NULL DEFAULT 0,"
+	.."   ready_time INTEGER NOT NULL DEFAULT 0"
+	..");";
+
+	dbh:test_reactive("SELECT count(*) FROM agents", "DROP TABLE agents", sql_agent)
+
 end
 
 function load_to_db_queue(dbh, config)
-	if config['queue'] ~= nil then
-		for key, value in pairs(config['queue']) do  
-
-			if value['name'] == nil then
-				return
-			end
-
-			name = value['name']
-			authority = value['authority']
-
-			if value['route'] ~= nil and authority ~= nil then
-				if #value['route'] == 0 then
-					sql = string.format("insert into callout_queue (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, "", "", "")
-
-					utils.print_msg("info", callId, sql)
-					dbh:query(sql)
-				end
-
-				for key2, value2 in pairs(value['route']) do
-					if value2['line_name'] ~= nil or  value2['line_point'] ~= nil or value2['line_pri'] ~= nil then
-						sql = string.format("insert into callout_queue (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, value2['line_name'], value2['line_point'], value2['line_pri'])
-
-						utils.print_msg("info", callId, sql)
-						dbh:query(sql)
-					end
-				end
-			elseif value['route'] ~= nil and authority == nil then
-				for key2, value2 in pairs(value['route']) do
-					if value2['line_name'] ~= nil or  value2['line_point'] ~= nil or value2['line_pri'] ~= nil then
-						sql = string.format("insert into callout_queue (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, "", value2['line_name'], value2['line_point'], value2['line_pri'])
-						utils.print_msg("info", callId, sql)
-						dbh:query(sql)
-					end
-				end
-			elseif value['route'] == nil and authority ~= nil then
-				sql = string.format("insert into callout_queue (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, "", "", "")
-
-				utils.print_msg("info", callId, sql)
-				dbh:query(sql)
-			end
-		end 
-	end
-end
-
-
-
-function load_to_db_phone(dbh, config)
-	if config['phone'] ~= nil then
-		for key, value in pairs(config['phone']) do  
-
-			if value['name'] == nil then
-				return
-			end
-
-			name = value['name']
-			authority = value['authority']
-
-			if value['route'] ~= nil then
-				for key2, value2 in pairs(value['route']) do
-					if value2['line_name'] ~= nil or  value2['line_point'] ~= nil or value2['line_pri'] ~= nil then
-						sql = string.format("insert into callout_phone (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, value2['line_name'], value2['line_point'], value2['line_pri'])
-						utils.print_msg("info", callId, sql)
-						dbh:query(sql)
-					end
-				end
-			else
-				sql = string.format("insert into callout_phone (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, "", "", "")
-
-				utils.print_msg("info", callId, sql)
-				dbh:query(sql)
-			end
-		end
-	end
-end
-
-function load_to_db_operator(dbh, config)
-	if config['operator'] ~= nil then
-		for key, value in pairs(config['operator']) do  
-
-			if value['name'] == nil then
-				return
-			end
-
-			name = value['name']
-			authority = value['authority']
-			if value['route'] ~= nil then
-				for key2, value2 in pairs(value['route']) do
-					if value2['line_name'] ~= nil or  value2['line_point'] ~= nil or value2['line_pri'] ~= nil then
-						sql = string.format("insert into callout_operator (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, value2['line_name'], value2['line_point'], value2['line_pri'])
-						utils.print_msg("info", callId, sql)
-						dbh:query(sql)
-					end
-				end
-			else
-				sql = string.format("insert into callout_operator (name, authority_name, line_name, line_point, line_pri) values ('%s', '%s', '%s', '%s', '%s')", name, authority, "", "", "")
-
-				utils.print_msg("info", callId, sql)
-				dbh:query(sql)
-			end
-		end
-	end
-end
-
-function load_to_db_authoritys(dbh, config)
-
-	if config['authority'] == nil then
+	if config['queue'] == nil then
 		return
 	end
 
-	for key, value in pairs(config['authority']) do  
-		authority_name  = value['authority_name']
-		authority_value = value['value']
-		sql = string.format("insert into callout_authority (authority_name, authority_value) values ('%s', '%s')", authority_name, authority_value)
+	for key, value in pairs(config['queue']) do  
+		local name = value['name']
+		local strtegy = value['strtegy']
+		local moh_sound = value['moh_sound']
+		local time_base_score = value['time_base_score']
+		local max_wait_time = value['max_wait_time']
+		local max_wait_time_with_no_agent = value['max_wait_time_with_no_agent']
+		local max_wait_time_with_no_agent_time_reached = value['max_wait_time_with_no_agent_time_reached']
+		local tier_rules_apply = value['tier_rules_apply']
+		local discard_abandoned_after = value['discard_abandoned_after']
+		local abandoned_resume_allowed = value['abandoned_resume_allowed']
+	
+
+
+		sql = string.format("insert into cc_queue (name, strtegy, moh_sound, time_base_score, max_wait_time,max_wait_time_with_no_agent, max_wait_time_with_no_agent_time_reached,tier_rules_apply,discard_abandoned_after,abandoned_resume_allowed) values ('%s', '%s', '%s', '%s','%s', '%s', '%s', '%s', '%s', '%s')", name, strtegy, moh_sound, time_base_score, max_wait_time,max_wait_time_with_no_agent, max_wait_time_with_no_agent_time_reached,tier_rules_apply,discard_abandoned_after,abandoned_resume_allowed);
 
 		utils.print_msg("info", callId, sql)
+
 		dbh:query(sql)
+
 	end
 end
 
-function load_to_db_lines(dbh, config)
-
-	if config['lines'] == nil then
+function load_to_db_tiers(dbh, config)
+	if config['tiers'] == nil then
 		return
 	end
 
-	for key, value in pairs(config['lines']) do  
-		local line_name         = value['line_name']
-		local caller_number     = value['caller_number']
-		local caller_number_bak = value['caller_number_bak']
-		local route_code = value['route_code']
-		sql = string.format("insert into callout_line (line_name, caller_number, caller_number_bak, route_code) values ('%s', '%s', '%s', '%s')", line_name, caller_number, caller_number_bak, route_code)
+	for key, value in pairs(config['tiers']) do  
+		local queue    = value['queue_name']
+		local agent    = value['agent']
+		local state    = value['state']
+		local level    = value['level']
+		local position = value['position']
+
+		sql = string.format("insert into tiers (queue, agent,  level, position) values ('%s', '%s', '%s', '%s')", queue, agent, level, position);
 
 		utils.print_msg("info", callId, sql)
+
 		dbh:query(sql)
+
+	end	
+end
+
+
+function load_to_db_agent(dbh, config)
+
+	if config['agent'] == nil then
+		return
 	end
 
+	for key, value in pairs(config['agent']) do  
+		local name       = value['name']
+		local ntype      = value['type']
+		local status     = value['status']
+		local max_no_answer = value['max_no_answer']
+		local wrap_up_time = value['wrap_up_time']
+		local reject_delay_time = value['reject_delay_time']
+		local busy_delay_time = value['busy_delay_time']
+
+
+		sql = string.format("insert into agents (name, type,  status, max_no_answer, wrap_up_time,reject_delay_time,busy_delay_time) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s')", name, ntype, status, max_no_answer, wrap_up_time, reject_delay_time, busy_delay_time);
+
+		utils.print_msg("info", callId, sql)
+
+		dbh:query(sql)
+
+	end	
+
+end
+
+function load_to_db_vdn(dbh, config)
+	if config['vdn'] == nil then
+		return
+	end
+
+	for key, value in pairs(config['vdn']) do  
+		local name       = value['name']
+		local queue_name = value['queue_name']
+
+		sql = string.format("insert into vdn (name, queue) values ('%s', '%s')", name, queue_name);
+
+		utils.print_msg("info", callId, sql)
+
+		dbh:query(sql)
+	end
 end
 
 function load_to_db(dbh, config)
-
+	load_to_db_vdn(dbh, config)
 	load_to_db_queue(dbh, config)
-	load_to_db_phone(dbh, config)
-	load_to_db_operator(dbh, config)
-	load_to_db_authoritys(dbh, config)
-	load_to_db_lines(dbh, config)
+	load_to_db_tiers(dbh, config)
+	load_to_db_agent(dbh, config)
 
 end
 

@@ -1,0 +1,36 @@
+{
+	"queue": [
+	{
+		"name": "251002",
+		"strtegy": "llongest-idle-agent",
+		"moh_sound": "$$",
+		"time_base_score":"system",
+		"max_wait_time" :"0",
+		"max_wait_time_with_no_agent" :"0",
+		"max_wait_time_with_no_agent_time_reached" :"5",
+		"tier_rules_apply" :"false",
+		"discard_abandoned_after" :"60",
+		"abandoned_resume_allowed" :"false"
+	}
+	],
+	"agent" : [
+		{
+			"name":"1000@default",
+			"type":"callback",
+			"contact":"",
+			"status":"Available",
+			"max_no_answer":"3",
+			"wrap_up_time":"10",
+			"reject_delay_time":"10",
+			"busy_delay_time":"60"
+		} 
+	],
+	"vdn" : [
+		{"name": "2300", "queue_name": "233450"},
+		{"name": "2301", "queue_name": "233450"}
+	],
+	"tiers": [
+		{"agent": "2300", "queue_name": "233450", "level":"1", "position":"2"},
+		{"agent": "2302", "queue_name": "233450", "level":"1", "position":"2"}
+	]
+}

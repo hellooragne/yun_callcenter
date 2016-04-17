@@ -1,7 +1,7 @@
 action = argv[1]
 --calleeNum = argv[2]
 
-http = require('httpAgent')
+--http = require('httpAgent')
 route  = require('route')
 io     = require('io')
 
@@ -20,14 +20,14 @@ callId = (session == nil) and "0" or session:get_uuid()
 --print(action)
 
 --route
-local dbh = freeswitch.Dbh("odbc://systeminfo::")
+local dbh = freeswitch.Dbh("odbc://freeswitch::")
 
 local f = io.popen("cd; pwd")
 local l = string.sub(f:read("*a"), 1, -2)
 local p = "/node_modules/config_callout_control/fs_conf/"
 
 if action == 'reload' then
-	settings.load(dbh, l..p)
+	settings.load(dbh, '/usr/local/freeswitch/scripts/script_callcenter/conf/')
 elseif action == 'lreload' then
 	callee.reload(dbh, l..p.."phone_location.csv")
 elseif action == 'authority' then

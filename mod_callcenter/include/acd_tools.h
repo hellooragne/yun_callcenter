@@ -4,6 +4,9 @@
 #include <switch.h>
 #include "acd_queue.h"
 
+
+typedef struct cc_queue cc_queue_t;
+
 struct globals_type{
 	switch_hash_t *queue_hash;
 	int debug;

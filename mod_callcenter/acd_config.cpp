@@ -3059,7 +3059,7 @@ SWITCH_STANDARD_API(cc_config_api_function)
                     if (argc-initial_argc == 2) {
                         get_queue_context_cli(stream, argv[1 + initial_argc]);
                     } else {
-                        get_queue_context_cli(stream, "");
+                        get_queue_context_cli(stream, (char *)"");
                     }
                 }
                 

@@ -188,7 +188,7 @@ int cc_queue_count(const char *queue)
 			sql = switch_mprintf("SELECT count(*) FROM members WHERE queue = '%q' AND (state = '%q' OR state = '%q')",
 					queue, cc_member_state2str(CC_MEMBER_STATE_WAITING), cc_member_state2str(CC_MEMBER_STATE_TRYING));
 		}
-		cc_execute_sql2str(NULL, sql, res, sizeof(res));
+		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 		switch_safe_free(sql);
 		count = atoi(res);
 

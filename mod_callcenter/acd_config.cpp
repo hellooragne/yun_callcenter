@@ -2008,6 +2008,7 @@ SWITCH_STANDARD_API(cc_config_api_function)
 		}
 	} else if (section && !strcasecmp(section, "queue")) {
 		if (action && !strcasecmp(action, "load")) {
+			//hmeng
 			if (argc-initial_argc < 1) {
 				stream->write_function(stream, "%s", "-ERR Invalid!\n");
 				goto done;

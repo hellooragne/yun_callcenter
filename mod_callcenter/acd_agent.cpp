@@ -9,7 +9,7 @@ cc_status_t cc_agent_add(const char *agent, const char *type)
 		char res[256] = "";
 		/* Check to see if agent already exist */
 		sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-		cc_execute_sql2str(NULL, sql, res, sizeof(res));
+		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 		switch_safe_free(sql);
 
 		if (atoi(res) != 0) {
@@ -21,7 +21,7 @@ cc_status_t cc_agent_add(const char *agent, const char *type)
 				agent, type, cc_agent_status2str(CC_AGENT_STATUS_LOGGED_OUT));
 		sql = switch_mprintf("INSERT INTO agents (name, system, type, status, state) VALUES('%q', 'single_box', '%q', '%q', '%q');", 
 				agent, type, cc_agent_status2str(CC_AGENT_STATUS_LOGGED_OUT), cc_agent_state2str(CC_AGENT_STATE_WAITING));
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 	} else {
 		result = CC_STATUS_AGENT_INVALID_TYPE;
@@ -41,7 +41,7 @@ cc_status_t cc_agent_del(const char *agent)
 	sql = switch_mprintf("DELETE FROM agents WHERE name = '%q';"
 			"DELETE FROM tiers WHERE agent = '%q';",
 			agent, agent);
-	cc_execute_sql(sql, NULL);
+	cc_execute_sql(NULL, sql, NULL);
 	switch_safe_free(sql);
 	return result;
 }
@@ -55,7 +55,7 @@ cc_status_t cc_agent_get(const char *key, const char *agent, char *ret_result, s
 
 	/* Check to see if agent already exists */
 	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-	cc_execute_sql2str(NULL, sql, res, sizeof(res));
+	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 	switch_safe_free(sql);
 
 	if (atoi(res) == 0) {
@@ -66,7 +66,7 @@ cc_status_t cc_agent_get(const char *key, const char *agent, char *ret_result, s
 	if (!strcasecmp(key, "status") || !strcasecmp(key, "state") || !strcasecmp(key, "uuid") ) { 
 		/* Check to see if agent already exists */
 		sql = switch_mprintf("SELECT %q FROM agents WHERE name = '%q'", key, agent);
-		cc_execute_sql2str(NULL, sql, res, sizeof(res));
+		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 		switch_safe_free(sql);
 		switch_snprintf(ret_result, ret_result_size, "%s", res);
 		result = CC_STATUS_SUCCESS;
@@ -107,7 +107,7 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 
 	/* Check to see if agent already exist */
 	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-	cc_execute_sql2str(NULL, sql, res, sizeof(res));
+	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 	switch_safe_free(sql);
 
 	if (atoi(res) == 0) {
@@ -127,27 +127,33 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 				sql = switch_mprintf("UPDATE agents SET status = '%q', last_status_change = '%" SWITCH_TIME_T_FMT "' WHERE name = '%q'",
 						value, local_epoch_time_now(NULL), agent);
 			}
-			cc_execute_sql(sql, NULL);
+			cc_execute_sql(NULL, sql, NULL);
 			switch_safe_free(sql);
 
 
 			/* Used to stop any active callback */
 			if (cc_agent_str2status(value) != CC_AGENT_STATUS_AVAILABLE) {
 				sql = switch_mprintf("SELECT uuid FROM members WHERE serving_agent = '%q' AND serving_system = 'single_box' AND NOT state = 'Answered'", agent);
-				cc_execute_sql2str(NULL, sql, res, sizeof(res));
+				cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 				switch_safe_free(sql);
 				if (!switch_strlen_zero(res)) {
+				//	switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", res, SWITCH_CAUSE_ORIGINATOR_CANCEL);
 
 					/*hmeng*/
 					switch_core_session_hupall_matching_var_ans("cc_member_pre_answer_uuid", res, SWITCH_CAUSE_ORIGINATOR_CANCEL, (switch_hup_type_t) (SHT_UNANSWERED | SHT_ANSWERED));
 				}
 			}
 
-
+            // get operator
+            sql = switch_mprintf("SELECT name FROM operators WHERE agent = '%q'", agent);
+            cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
+            switch_safe_free(sql);
+            
 			result = CC_STATUS_SUCCESS;
 
 			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
+				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Operator", res);     // res --> operator.name
+                switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-status-change");
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-Status", value);
 				switch_event_fire(&event);
@@ -165,7 +171,7 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 				sql = switch_mprintf("UPDATE agents SET state = '%q', last_offered_call = '%" SWITCH_TIME_T_FMT "' WHERE name = '%q'",
 						value, local_epoch_time_now(NULL), agent);
 			}
-			cc_execute_sql(sql, NULL);
+			cc_execute_sql(NULL, sql, NULL);
 			switch_safe_free(sql);
 
 			result = CC_STATUS_SUCCESS;
@@ -183,37 +189,37 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 		}
 	} else if (!strcasecmp(key, "uuid")) {
 		sql = switch_mprintf("UPDATE agents SET uuid = '%q', system = 'single_box' WHERE name = '%q'", value, agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 	} else if (!strcasecmp(key, "contact")) {
 		sql = switch_mprintf("UPDATE agents SET contact = '%q', system = 'single_box' WHERE name = '%q'", value, agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 	} else if (!strcasecmp(key, "ready_time")) {
 		sql = switch_mprintf("UPDATE agents SET ready_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 	} else if (!strcasecmp(key, "busy_delay_time")) {
 		sql = switch_mprintf("UPDATE agents SET busy_delay_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 	} else if (!strcasecmp(key, "reject_delay_time")) {
 		sql = switch_mprintf("UPDATE agents SET reject_delay_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 	} else if (!strcasecmp(key, "no_answer_delay_time")) {
 		sql = switch_mprintf("UPDATE agents SET no_answer_delay_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
@@ -224,21 +230,21 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 		}
 
 		sql = switch_mprintf("UPDATE agents SET type = '%q' WHERE name = '%q'", value, agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 
 	} else if (!strcasecmp(key, "max_no_answer")) {
 		sql = switch_mprintf("UPDATE agents SET max_no_answer = '%d', system = 'single_box' WHERE name = '%q'", atoi(value), agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 
 	} else if (!strcasecmp(key, "wrap_up_time")) {
 		sql = switch_mprintf("UPDATE agents SET wrap_up_time = '%d', system = 'single_box' WHERE name = '%q'", atoi(value), agent);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
@@ -283,7 +289,13 @@ switch_status_t load_agent(const char *agent_name)
 
 		if (type) {
 			cc_status_t res = cc_agent_add(agent_name, type);
-			if (res == CC_STATUS_SUCCESS || res == CC_STATUS_AGENT_ALREADY_EXIST) {
+			
+            // For HA, only add new agent, DO NOT update or DELETE.
+            if (res == CC_STATUS_AGENT_ALREADY_EXIST) {
+                goto end;
+            }
+            
+            if (res == CC_STATUS_SUCCESS) {
 				if (contact) {
 					cc_agent_update("contact", contact, agent_name);
 				}
@@ -305,10 +317,10 @@ switch_status_t load_agent(const char *agent_name)
 				if (no_answer_delay_time) {
 					cc_agent_update("no_answer_delay_time", no_answer_delay_time, agent_name);
 				}
-
-				if (type && res == CC_STATUS_AGENT_ALREADY_EXIST) {
+				/*
+                if (type && res == CC_STATUS_AGENT_ALREADY_EXIST) {
 					cc_agent_update("type", type, agent_name);
-				}
+				}*/
 
 			}
 		}

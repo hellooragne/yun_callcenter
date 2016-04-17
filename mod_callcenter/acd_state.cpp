@@ -14,10 +14,11 @@ static struct cc_state_table STATE_CHART[] = {
 
 static struct cc_status_table AGENT_STATUS_CHART[] = {
 	{"Unknown", CC_AGENT_STATUS_UNKNOWN},
-	{"Logged Out", CC_AGENT_STATUS_LOGGED_OUT},
+	{"LoggedOut", CC_AGENT_STATUS_LOGGED_OUT},
+	{"LoggedOn", CC_AGENT_STATUS_LOGGED_ON},
 	{"Available", CC_AGENT_STATUS_AVAILABLE},
-	{"Available (On Demand)", CC_AGENT_STATUS_AVAILABLE_ON_DEMAND},
-	{"On Break", CC_AGENT_STATUS_ON_BREAK},
+	{"AvailableOnDemand", CC_AGENT_STATUS_AVAILABLE_ON_DEMAND},
+	{"OnBreak", CC_AGENT_STATUS_ON_BREAK},
 	{NULL, 0}
 
 };
@@ -26,12 +27,12 @@ static struct cc_state_table AGENT_STATE_CHART[] = {
 	{"Unknown", CC_AGENT_STATE_UNKNOWN},
 	{"Waiting", CC_AGENT_STATE_WAITING},
 	{"Receiving", CC_AGENT_STATE_RECEIVING},
-	{"In a queue call", CC_AGENT_STATE_IN_A_QUEUE_CALL},
+	{"InAQueueCall", CC_AGENT_STATE_IN_A_QUEUE_CALL},
+    {"InADirectCall", CC_AGENT_STATE_IN_A_DIRECT_CALL},
 	{"Idle", CC_AGENT_STATE_IDLE},
 	{NULL, 0}
 
 };
-
 
 static struct cc_state_table MEMBER_STATE_CHART[] = {
 	{"Unknown", CC_MEMBER_STATE_UNKNOWN},
@@ -68,7 +69,6 @@ const char * cc_tier_state2str(cc_tier_state_t state)
 
 	return str;
 }
-
 
 cc_tier_state_t cc_tier_str2state(const char *str)
 {
@@ -204,5 +204,4 @@ cc_member_cancel_reason_t cc_member_cancel_str2reason(const char *str)
 	}
 	return reason;
 }
-
 

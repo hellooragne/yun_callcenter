@@ -7,6 +7,8 @@
 #include "acd_common.h"
 #include "acd_agent.h"
 
+#define MASTER_NODE       "masternode"
+#define SYSTEM_RECOVERY   "systemrecovery"
 
 struct list_result {
        const char *name;

@@ -16,7 +16,7 @@ cc_status_t cc_tier_add(const char *queue_name, const char *agent, const char *s
 		char res[256] = "";
 		/* Check to see if agent already exist */
 		sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-		cc_execute_sql2str(NULL, sql, res, sizeof(res));
+		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 		switch_safe_free(sql);
 
 		if (atoi(res) == 0) {
@@ -25,8 +25,8 @@ cc_status_t cc_tier_add(const char *queue_name, const char *agent, const char *s
 		}
 
 		/* Check to see if tier already exist */
-		sql = switch_mprintf("SELECT count(*) FROM cc_tiers WHERE agent = '%q' AND queue = '%q'", agent, queue_name);
-		cc_execute_sql2str(NULL, sql, res, sizeof(res));
+		sql = switch_mprintf("SELECT count(*) FROM tiers WHERE agent = '%q' AND queue = '%q'", agent, queue_name);
+		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 		switch_safe_free(sql);
 
 		if (atoi(res) != 0) {
@@ -36,9 +36,9 @@ cc_status_t cc_tier_add(const char *queue_name, const char *agent, const char *s
 
 		/* Add Agent in tier */
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Adding Tier on Queue %s for Agent %s, level %d, position %d\n", queue_name, agent, level, position);
-		sql = switch_mprintf("INSERT INTO cc_tiers (queue, agent, state, level, position) VALUES('%q', '%q', '%q', '%d', '%d');",
+		sql = switch_mprintf("INSERT INTO tiers (queue, agent, state, level, position) VALUES('%q', '%q', '%q', '%d', '%d');",
 				queue_name, agent, state, level, position);
-		cc_execute_sql(sql, NULL);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
@@ -60,8 +60,8 @@ cc_status_t cc_tier_update(const char *key, const char *value, const char *queue
 	cc_queue_t *queue = NULL;
 
 	/* Check to see if tier already exist */
-	sql = switch_mprintf("SELECT count(*) FROM cc_tiers WHERE agent = '%q' AND queue = '%q'", agent, queue_name);
-	cc_execute_sql2str(NULL, sql, res, sizeof(res));
+	sql = switch_mprintf("SELECT count(*) FROM tiers WHERE agent = '%q' AND queue = '%q'", agent, queue_name);
+	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 	switch_safe_free(sql);
 
 	if (atoi(res) == 0) {
@@ -71,7 +71,7 @@ cc_status_t cc_tier_update(const char *key, const char *value, const char *queue
 
 	/* Check to see if agent already exist */
 	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-	cc_execute_sql2str(NULL, sql, res, sizeof(res));
+	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 	switch_safe_free(sql);
 
 	if (atoi(res) == 0) {
@@ -88,8 +88,8 @@ cc_status_t cc_tier_update(const char *key, const char *value, const char *queue
 
 	if (!strcasecmp(key, "state")) {
 		if (cc_tier_str2state(value) != CC_TIER_STATE_UNKNOWN) {
-			sql = switch_mprintf("UPDATE cc_tiers SET state = '%q' WHERE queue = '%q' AND agent = '%q'", value, queue_name, agent);
-			cc_execute_sql(sql, NULL);
+			sql = switch_mprintf("UPDATE tiers SET state = '%q' WHERE queue = '%q' AND agent = '%q'", value, queue_name, agent);
+			cc_execute_sql(NULL, sql, NULL);
 			switch_safe_free(sql);
 			result = CC_STATUS_SUCCESS;
 		} else {
@@ -97,15 +97,15 @@ cc_status_t cc_tier_update(const char *key, const char *value, const char *queue
 			goto done;
 		}
 	} else if (!strcasecmp(key, "level")) {
-		sql = switch_mprintf("UPDATE cc_tiers SET level = '%d' WHERE queue = '%q' AND agent = '%q'", atoi(value), queue_name, agent);
-		cc_execute_sql(sql, NULL);
+		sql = switch_mprintf("UPDATE tiers SET level = '%d' WHERE queue = '%q' AND agent = '%q'", atoi(value), queue_name, agent);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
 
 	} else if (!strcasecmp(key, "position")) {
-		sql = switch_mprintf("UPDATE cc_tiers SET position = '%d' WHERE queue = '%q' AND agent = '%q'", atoi(value), queue_name, agent);
-		cc_execute_sql(sql, NULL);
+		sql = switch_mprintf("UPDATE tiers SET position = '%d' WHERE queue = '%q' AND agent = '%q'", atoi(value), queue_name, agent);
+		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
 
 		result = CC_STATUS_SUCCESS;
@@ -127,7 +127,7 @@ cc_status_t cc_tier_del(const char *queue_name, const char *agent)
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Deleted tier Agent %s in Queue %s\n", agent, queue_name);
 	sql = switch_mprintf("DELETE FROM cc_tiers WHERE queue = '%q' AND agent = '%q';", queue_name, agent);
-	cc_execute_sql(sql, NULL);
+	cc_execute_sql(NULL, sql, NULL);
 	switch_safe_free(sql);
 
 	result = CC_STATUS_SUCCESS;

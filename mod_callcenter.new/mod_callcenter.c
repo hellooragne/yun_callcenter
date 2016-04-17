@@ -36,12 +36,6 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#define CALLCENTER_EVENT "callcenter::info"
-
-#define CC_AGENT_TYPE_CALLBACK "Callback"
-#define CC_AGENT_TYPE_UUID_STANDBY "uuid-standby"
-#define CC_SQLITE_DB_NAME "callcenter"
-
 
 /* Prototypes */
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_callcenter_shutdown);
@@ -53,45 +47,6 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_callcenter_load);
  */
 SWITCH_MODULE_DEFINITION(mod_callcenter, mod_callcenter_load, mod_callcenter_shutdown, NULL);
 
-static const char *global_cf = "callcenter.conf";
-
-struct cc_status_table {
-	const char *name;
-	int status;
-};
-
-struct cc_state_table {
-	const char *name;
-	int state;
-};
-
-typedef enum {
-	CC_STATUS_SUCCESS,
-	CC_STATUS_FALSE,
-	CC_STATUS_AGENT_NOT_FOUND,
-	CC_STATUS_QUEUE_NOT_FOUND,
-	CC_STATUS_AGENT_ALREADY_EXIST,
-	CC_STATUS_AGENT_INVALID_TYPE,
-	CC_STATUS_AGENT_INVALID_STATUS,
-	CC_STATUS_AGENT_INVALID_STATE,
-    CC_STATUS_AGENT_ALREADY_BIND,
-	CC_STATUS_TIER_ALREADY_EXIST,
-	CC_STATUS_TIER_NOT_FOUND,
-	CC_STATUS_TIER_INVALID_STATE,
-	CC_STATUS_OPERATOR_ALREADY_EXIST,
-	CC_STATUS_OPERATOR_ALREADY_BIND,
-    CC_STATUS_OPERATOR_ALREADY_UNBIND,
-	CC_STATUS_OPERATOR_NOT_FOUND,
-    CC_STATUS_OPERATORGROUP_ALREADY_EXIST,
-    CC_STATUS_OPERATORGROUP_NOT_FOUND,
-    CC_STATUS_VDN_ALREADY_EXIST,
-    CC_STATUS_VDN_NOT_FOUND,
-    CC_STATUS_QUEUE_CONTROL_ALREADY_EXIST,
-    CC_STATUS_QUEUE_CONTROL_NOT_FOUND,
-    CC_STATUS_OPERATOR_CONTROL_ALREADY_EXIST,
-    CC_STATUS_OPERATOR_CONTROL_NOT_FOUND,
-	CC_STATUS_INVALID_KEY
-} cc_status_t;
 
 typedef enum {
 	CC_TIER_STATE_UNKNOWN = 0,
@@ -102,17 +57,6 @@ typedef enum {
 	CC_TIER_STATE_STANDBY = 5
 } cc_tier_state_t;
 
-static struct cc_state_table STATE_CHART[] = {
-	{"Unknown", CC_TIER_STATE_UNKNOWN},
-	{"No Answer", CC_TIER_STATE_NO_ANSWER},
-	{"Ready", CC_TIER_STATE_READY},
-	{"Offering", CC_TIER_STATE_OFFERING},
-	{"Active Inbound", CC_TIER_STATE_ACTIVE_INBOUND},
-	{"Standby", CC_TIER_STATE_STANDBY},
-	{NULL, 0}
-
-};
-
 typedef enum {
 	CC_AGENT_STATUS_UNKNOWN = 0,
 	CC_AGENT_STATUS_LOGGED_OUT,
@@ -122,74 +66,8 @@ typedef enum {
 	CC_AGENT_STATUS_ON_BREAK
 } cc_agent_status_t;
 
-static struct cc_status_table AGENT_STATUS_CHART[] = {
-	{"Unknown", CC_AGENT_STATUS_UNKNOWN},
-	{"LoggedOut", CC_AGENT_STATUS_LOGGED_OUT},
-	{"LoggedOn", CC_AGENT_STATUS_LOGGED_ON},
-	{"Available", CC_AGENT_STATUS_AVAILABLE},
-	{"AvailableOnDemand", CC_AGENT_STATUS_AVAILABLE_ON_DEMAND},
-	{"OnBreak", CC_AGENT_STATUS_ON_BREAK},
-	{NULL, 0}
 
-};
 
-typedef enum {
-	CC_AGENT_STATE_UNKNOWN = 0,
-	CC_AGENT_STATE_WAITING = 1,
-	CC_AGENT_STATE_RECEIVING = 2,
-	CC_AGENT_STATE_IN_A_QUEUE_CALL = 3,
-    CC_AGENT_STATE_IN_A_DIRECT_CALL = 4,
-	CC_AGENT_STATE_IDLE = 5
-} cc_agent_state_t;
-
-static struct cc_state_table AGENT_STATE_CHART[] = {
-	{"Unknown", CC_AGENT_STATE_UNKNOWN},
-	{"Waiting", CC_AGENT_STATE_WAITING},
-	{"Receiving", CC_AGENT_STATE_RECEIVING},
-	{"InAQueueCall", CC_AGENT_STATE_IN_A_QUEUE_CALL},
-    {"InADirectCall", CC_AGENT_STATE_IN_A_DIRECT_CALL},
-	{"Idle", CC_AGENT_STATE_IDLE},
-	{NULL, 0}
-
-};
-
-typedef enum {
-	CC_MEMBER_STATE_UNKNOWN = 0,
-	CC_MEMBER_STATE_WAITING = 1,
-	CC_MEMBER_STATE_TRYING = 2,
-	CC_MEMBER_STATE_ANSWERED = 3,
-	CC_MEMBER_STATE_ABANDONED = 4
-} cc_member_state_t;
-
-static struct cc_state_table MEMBER_STATE_CHART[] = {
-	{"Unknown", CC_MEMBER_STATE_UNKNOWN},
-	{"Waiting", CC_MEMBER_STATE_WAITING},
-	{"Trying", CC_MEMBER_STATE_TRYING},
-	{"Answered", CC_MEMBER_STATE_ANSWERED},
-	{"Abandoned", CC_MEMBER_STATE_ABANDONED},
-	{NULL, 0}
-
-};
-
-struct cc_member_cancel_reason_table {
-	const char *name;
-	int reason;
-};
-
-typedef enum {
-	CC_MEMBER_CANCEL_REASON_NONE,
-	CC_MEMBER_CANCEL_REASON_TIMEOUT,
-	CC_MEMBER_CANCEL_REASON_NO_AGENT_TIMEOUT,
-	CC_MEMBER_CANCEL_REASON_BREAK_OUT
-} cc_member_cancel_reason_t;
-
-static struct cc_member_cancel_reason_table MEMBER_CANCEL_REASON_CHART[] = {
-	{"NONE", CC_MEMBER_CANCEL_REASON_NONE},
-	{"TIMEOUT", CC_MEMBER_CANCEL_REASON_TIMEOUT},
-	{"NO_AGENT_TIMEOUT", CC_MEMBER_CANCEL_REASON_NO_AGENT_TIMEOUT},
-	{"BREAK_OUT", CC_MEMBER_CANCEL_REASON_BREAK_OUT},
-	{NULL, 0}
-};
 
 static char members_sql[] =
 "CREATE TABLE members (\n"
@@ -321,14 +199,7 @@ static long int gettime() {
 }
 */
 /* TODO This is temporary until we either move it to the core, or use it differently in the module */
-switch_time_t local_epoch_time_now(switch_time_t *t)
-{
-	switch_time_t now = switch_micro_time_now() / 1000000; /* APR_USEC_PER_SEC */
-	if (t) {
-		*t = now;
-	}
-	return now;
-}
+
 
 // general method to get some infomation from DB. add by Tom LIANG.
 #define MAX_INFO_TUPLE_NUM   20
@@ -384,167 +255,9 @@ static int info_list_callback(void *pArg, int argc, char **argv, char **columnNa
 	return 0;
 }
 
-const char * cc_tier_state2str(cc_tier_state_t state)
-{
-	uint8_t x;
-	const char *str = "Unknown";
-
-	for (x = 0; x < (sizeof(STATE_CHART) / sizeof(struct cc_state_table)) - 1; x++) {
-		if (STATE_CHART[x].state == state) {
-			str = STATE_CHART[x].name;
-			break;
-		}
-	}
-
-	return str;
-}
-
-cc_tier_state_t cc_tier_str2state(const char *str)
-{
-	uint8_t x;
-	cc_tier_state_t state = CC_TIER_STATE_UNKNOWN;
-
-	for (x = 0; x < (sizeof(STATE_CHART) / sizeof(struct cc_state_table)) - 1 && STATE_CHART[x].name; x++) {
-		if (!strcasecmp(STATE_CHART[x].name, str)) {
-			state = STATE_CHART[x].state;
-			break;
-		}
-	}
-	return state;
-}
-
-const char * cc_member_cancel_reason2str(cc_member_cancel_reason_t reason)
-{
-	uint8_t x;
-	const char *str = "NONE";
-
-	for (x = 0; x < (sizeof(MEMBER_CANCEL_REASON_CHART) / sizeof(struct cc_member_cancel_reason_table)) - 1; x++) {
-		if (MEMBER_CANCEL_REASON_CHART[x].reason == reason) {
-			str = MEMBER_CANCEL_REASON_CHART[x].name;
-			break;
-		}
-	}
-
-	return str;
-}
-
-cc_member_cancel_reason_t cc_member_cancel_str2reason(const char *str)
-{
-	uint8_t x;
-	cc_member_cancel_reason_t reason = CC_MEMBER_CANCEL_REASON_NONE;
-
-	for (x = 0; x < (sizeof(MEMBER_CANCEL_REASON_CHART) / sizeof(struct cc_member_cancel_reason_table)) - 1 && MEMBER_CANCEL_REASON_CHART[x].name; x++) {
-		if (!strcasecmp(MEMBER_CANCEL_REASON_CHART[x].name, str)) {
-			reason = MEMBER_CANCEL_REASON_CHART[x].reason;
-			break;
-		}
-	}
-	return reason;
-}
-
-const char * cc_agent_status2str(cc_agent_status_t status)
-{
-	uint8_t x;
-	const char *str = "Unknown";
-
-	for (x = 0; x < (sizeof(AGENT_STATUS_CHART) / sizeof(struct cc_status_table)) - 1; x++) {
-		if (AGENT_STATUS_CHART[x].status == status) {
-			str = AGENT_STATUS_CHART[x].name;
-			break;
-		}
-	}
-
-	return str;
-}
-
-cc_agent_status_t cc_agent_str2status(const char *str)
-{
-	uint8_t x;
-	cc_agent_status_t status = CC_AGENT_STATUS_UNKNOWN;
-
-	for (x = 0; x < (sizeof(AGENT_STATUS_CHART) / sizeof(struct cc_status_table)) - 1 && AGENT_STATUS_CHART[x].name; x++) {
-		if (!strcasecmp(AGENT_STATUS_CHART[x].name, str)) {
-			status = AGENT_STATUS_CHART[x].status;
-			break;
-		}
-	}
-	return status;
-}
-
-const char * cc_agent_state2str(cc_agent_state_t state)
-{
-	uint8_t x;
-	const char *str = "Unknown";
-
-	for (x = 0; x < (sizeof(AGENT_STATE_CHART) / sizeof(struct cc_state_table)) - 1; x++) {
-		if (AGENT_STATE_CHART[x].state == state) {
-			str = AGENT_STATE_CHART[x].name;
-			break;
-		}
-	}
-
-	return str;
-}
-
-cc_agent_state_t cc_agent_str2state(const char *str)
-{
-	uint8_t x;
-	cc_agent_state_t state = CC_AGENT_STATE_UNKNOWN;
-
-	for (x = 0; x < (sizeof(AGENT_STATE_CHART) / sizeof(struct cc_state_table)) - 1 && AGENT_STATE_CHART[x].name; x++) {
-		if (!strcasecmp(AGENT_STATE_CHART[x].name, str)) {
-			state = AGENT_STATE_CHART[x].state;
-			break;
-		}
-	}
-	return state;
-}
-
-const char * cc_member_state2str(cc_member_state_t state)
-{
-	uint8_t x;
-	const char *str = "Unknown";
-
-	for (x = 0; x < (sizeof(MEMBER_STATE_CHART) / sizeof(struct cc_state_table)) - 1; x++) {
-		if (MEMBER_STATE_CHART[x].state == state) {
-			str = MEMBER_STATE_CHART[x].name;
-			break;
-		}
-	}
-
-	return str;
-}
-
-cc_member_state_t cc_member_str2state(const char *str)
-{
-	uint8_t x;
-	cc_member_state_t state = CC_MEMBER_STATE_UNKNOWN;
-
-	for (x = 0; x < (sizeof(MEMBER_STATE_CHART) / sizeof(struct cc_state_table)) - 1 && MEMBER_STATE_CHART[x].name; x++) {
-		if (!strcasecmp(MEMBER_STATE_CHART[x].name, str)) {
-			state = MEMBER_STATE_CHART[x].state;
-			break;
-		}
-	}
-	return state;
-}
 
 
-typedef enum {
-	PFLAG_DESTROY = 1 << 0
-} cc_flags_t;
-
-static struct {
-	switch_hash_t *queue_hash;
-	int debug;
-	char *odbc_dsn;
-	char *dbname;
-	int32_t threads;
-	int32_t running;
-	switch_mutex_t *mutex;
-	switch_memory_pool_t *pool;
-    switch_bool_t blMaster;
-} globals;
+struct globals_type globals;
 
 #define CC_QUEUE_CONFIGITEM_COUNT 100
 
@@ -631,24 +344,7 @@ static void destroy_queue(const char *queue_name, switch_bool_t block)
 }
 
 
-switch_cache_db_handle_t *cc_get_db_handle(void)
-{
-	switch_cache_db_handle_t *dbh = NULL;
-	char *dsn;
-	
-	if (!zstr(globals.odbc_dsn)) {
-		dsn = globals.odbc_dsn;
-	} else {
-		dsn = globals.dbname;
-	}
 
-	if (switch_cache_db_get_db_handle_dsn(&dbh, dsn) != SWITCH_STATUS_SUCCESS) {
-		dbh = NULL;
-	}
-	
-	return dbh;
-
-}
 /*!
  * \brief Sets the queue's configuration instructions 
  */
@@ -718,104 +414,11 @@ end:
 	return ret;
 }
 
-char *cc_execute_sql2str(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, char *resbuf, size_t len)
-{
-	char *ret = NULL;
 
-	switch_cache_db_handle_t *dbh = NULL;
 
-	if (mutex) {
-		switch_mutex_lock(mutex);
-	} else {
-		switch_mutex_lock(globals.mutex);
-	}
 
-	if (!(dbh = cc_get_db_handle())) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error Opening DB\n");
-		goto end;
-	}
 
-	ret = switch_cache_db_execute_sql2str(dbh, sql, resbuf, len, NULL);
 
-end:
-	switch_cache_db_release_db_handle(&dbh);
-
-	if (mutex) {
-		switch_mutex_unlock(mutex);
-	} else {
-		switch_mutex_unlock(globals.mutex);
-	}
-
-	return ret;
-}
-
-static switch_status_t cc_execute_sql(cc_queue_t *queue, char *sql, switch_mutex_t *mutex)
-{
-	switch_cache_db_handle_t *dbh = NULL;
-	switch_status_t status = SWITCH_STATUS_FALSE;
-
-	if (mutex) {
-		switch_mutex_lock(mutex);
-	} else {
-		switch_mutex_lock(globals.mutex);
-	}
-
-	if (!(dbh = cc_get_db_handle())) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error Opening DB\n");
-		goto end;
-	}
-
-	status = switch_cache_db_execute_sql(dbh, sql, NULL);
-
-end:
-
-	switch_cache_db_release_db_handle(&dbh);
-
-	if (mutex) {
-		switch_mutex_unlock(mutex);
-	} else {
-		switch_mutex_unlock(globals.mutex);
-	}
-
-	return status;
-}
-
-static switch_bool_t cc_execute_sql_callback(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, switch_core_db_callback_func_t callback, void *pdata)
-{
-	switch_bool_t ret = SWITCH_FALSE;
-	char *errmsg = NULL;
-	switch_cache_db_handle_t *dbh = NULL;
-
-	if (mutex) {
-		switch_mutex_lock(mutex);
-	} else {
-		switch_mutex_lock(globals.mutex);
-	}
-
-	if (!(dbh = cc_get_db_handle())) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error Opening DB\n");
-		goto end;
-	}
-
-	switch_cache_db_execute_sql_callback(dbh, sql, callback, pdata, &errmsg);
-
-	if (errmsg) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "SQL ERR: [%s] %s\n", sql, errmsg);
-		free(errmsg);
-	}
-
-end:
-
-	switch_cache_db_release_db_handle(&dbh);
-
-	if (mutex) {
-		switch_mutex_unlock(mutex);
-	} else {
-		switch_mutex_unlock(globals.mutex);
-	}
-
-	return ret;
-}
 
 static cc_queue_t *load_queue(const char *queue_name)
 {
@@ -956,36 +559,7 @@ int cc_queue_count(const char *queue)
 	return count;
 }
 
-cc_status_t cc_agent_add(const char *agent, const char *type)
-{
-	cc_status_t result = CC_STATUS_SUCCESS;
-	char *sql;
 
-	if (!strcasecmp(type, CC_AGENT_TYPE_CALLBACK) || !strcasecmp(type, CC_AGENT_TYPE_UUID_STANDBY)) {
-		char res[256] = "";
-		/* Check to see if agent already exist */
-		sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-		switch_safe_free(sql);
-
-		if (atoi(res) != 0) {
-			result = CC_STATUS_AGENT_ALREADY_EXIST;
-			goto done;
-		}
-		/* Add Agent */
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Adding Agent %s with type %s with default status %s\n", 
-				agent, type, cc_agent_status2str(CC_AGENT_STATUS_LOGGED_OUT));
-		sql = switch_mprintf("INSERT INTO agents (name, system, type, status, state) VALUES('%q', 'single_box', '%q', '%q', '%q');", 
-				agent, type, cc_agent_status2str(CC_AGENT_STATUS_LOGGED_OUT), cc_agent_state2str(CC_AGENT_STATE_WAITING));
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-	} else {
-		result = CC_STATUS_AGENT_INVALID_TYPE;
-		goto done;
-	}
-done:		
-	return result;
-}
 
 cc_status_t cc_agent_del(const char *agent)
 {
@@ -1002,219 +576,9 @@ cc_status_t cc_agent_del(const char *agent)
 	return result;
 }
 
-cc_status_t cc_agent_get(const char *key, const char *agent, char *ret_result, size_t ret_result_size)
-{
-	cc_status_t result = CC_STATUS_SUCCESS;
-	char *sql;
-	switch_event_t *event;
-	char res[256];
-
-	/* Check to see if agent already exists */
-	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-	switch_safe_free(sql);
-
-	if (atoi(res) == 0) {
-		result = CC_STATUS_AGENT_NOT_FOUND;
-		goto done;
-	}
-
-	if (!strcasecmp(key, "status") || !strcasecmp(key, "state") || !strcasecmp(key, "uuid") ) { 
-		/* Check to see if agent already exists */
-		sql = switch_mprintf("SELECT %q FROM agents WHERE name = '%q'", key, agent);
-		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-		switch_safe_free(sql);
-		switch_snprintf(ret_result, ret_result_size, "%s", res);
-		result = CC_STATUS_SUCCESS;
-
-		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
-			char tmpname[256];
-			if (!strcasecmp(key, "uuid")) {
-				switch_snprintf(tmpname, sizeof(tmpname), "CC-Agent-UUID");	
-			} else {
-				switch_snprintf(tmpname, sizeof(tmpname), "CC-Agent-%c%s", (char) switch_toupper(key[0]), key+1);
-			}
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
-			switch_event_add_header(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-%s-get", key);
-			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, tmpname, res);
-			switch_event_fire(&event);
-		}
-
-	} else {
-		result = CC_STATUS_INVALID_KEY;
-		goto done;
-
-	}
-
-done:   
-	if (result == CC_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Get Info Agent %s %s = %s\n", agent, key, res);
-	}
-
-	return result;
-}
-
-cc_status_t cc_agent_update(const char *key, const char *value, const char *agent)
-{
-	cc_status_t result = CC_STATUS_SUCCESS;
-	char *sql;
-	char res[256];
-	switch_event_t *event;
-
-	/* Check to see if agent already exist */
-	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-	switch_safe_free(sql);
-
-	if (atoi(res) == 0) {
-		result = CC_STATUS_AGENT_NOT_FOUND;
-		goto done;
-	}
-
-	if (!strcasecmp(key, "status")) {
-		if (cc_agent_str2status(value) != CC_AGENT_STATUS_UNKNOWN) {
-			/* Reset values on available only */
-			if (cc_agent_str2status(value) == CC_AGENT_STATUS_AVAILABLE) {
-				sql = switch_mprintf("UPDATE agents SET status = '%q', last_status_change = '%" SWITCH_TIME_T_FMT "', talk_time = 0, calls_answered = 0, no_answer_count = 0"
-						" WHERE name = '%q' AND NOT status = '%q'",
-						value, local_epoch_time_now(NULL),
-						agent, value);
-			} else {
-				sql = switch_mprintf("UPDATE agents SET status = '%q', last_status_change = '%" SWITCH_TIME_T_FMT "' WHERE name = '%q'",
-						value, local_epoch_time_now(NULL), agent);
-			}
-			cc_execute_sql(NULL, sql, NULL);
-			switch_safe_free(sql);
 
 
-			/* Used to stop any active callback */
-			if (cc_agent_str2status(value) != CC_AGENT_STATUS_AVAILABLE) {
-				sql = switch_mprintf("SELECT uuid FROM members WHERE serving_agent = '%q' AND serving_system = 'single_box' AND NOT state = 'Answered'", agent);
-				cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-				switch_safe_free(sql);
-				if (!switch_strlen_zero(res)) {
-					switch_core_session_hupall_matching_var("cc_member_pre_answer_uuid", res, SWITCH_CAUSE_ORIGINATOR_CANCEL);
-				}
-			}
 
-            // get operator
-            sql = switch_mprintf("SELECT name FROM operators WHERE agent = '%q'", agent);
-            cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-            switch_safe_free(sql);
-            
-			result = CC_STATUS_SUCCESS;
-
-			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Operator", res);     // res --> operator.name
-                switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-status-change");
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-Status", value);
-				switch_event_fire(&event);
-			}
-
-		} else {
-			result = CC_STATUS_AGENT_INVALID_STATUS;
-			goto done;
-		}
-	} else if (!strcasecmp(key, "state")) {
-		if (cc_agent_str2state(value) != CC_AGENT_STATE_UNKNOWN) {
-			if (cc_agent_str2state(value) != CC_AGENT_STATE_RECEIVING) {
-				sql = switch_mprintf("UPDATE agents SET state = '%q' WHERE name = '%q'", value, agent);
-			} else {
-				sql = switch_mprintf("UPDATE agents SET state = '%q', last_offered_call = '%" SWITCH_TIME_T_FMT "' WHERE name = '%q'",
-						value, local_epoch_time_now(NULL), agent);
-			}
-			cc_execute_sql(NULL, sql, NULL);
-			switch_safe_free(sql);
-
-			result = CC_STATUS_SUCCESS;
-
-			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-state-change");
-				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-State", value);
-				switch_event_fire(&event);
-			}
-
-		} else {
-			result = CC_STATUS_AGENT_INVALID_STATE;
-			goto done;
-		}
-	} else if (!strcasecmp(key, "uuid")) {
-		sql = switch_mprintf("UPDATE agents SET uuid = '%q', system = 'single_box' WHERE name = '%q'", value, agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else if (!strcasecmp(key, "contact")) {
-		sql = switch_mprintf("UPDATE agents SET contact = '%q', system = 'single_box' WHERE name = '%q'", value, agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else if (!strcasecmp(key, "ready_time")) {
-		sql = switch_mprintf("UPDATE agents SET ready_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else if (!strcasecmp(key, "busy_delay_time")) {
-		sql = switch_mprintf("UPDATE agents SET busy_delay_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else if (!strcasecmp(key, "reject_delay_time")) {
-		sql = switch_mprintf("UPDATE agents SET reject_delay_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else if (!strcasecmp(key, "no_answer_delay_time")) {
-		sql = switch_mprintf("UPDATE agents SET no_answer_delay_time = '%ld', system = 'single_box' WHERE name = '%q'", atol(value), agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else if (!strcasecmp(key, "type")) {
-		if (strcasecmp(value, CC_AGENT_TYPE_CALLBACK) && strcasecmp(value, CC_AGENT_TYPE_UUID_STANDBY)) {
-			result = CC_STATUS_AGENT_INVALID_TYPE;
-			goto done;
-		}
-
-		sql = switch_mprintf("UPDATE agents SET type = '%q' WHERE name = '%q'", value, agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-
-	} else if (!strcasecmp(key, "max_no_answer")) {
-		sql = switch_mprintf("UPDATE agents SET max_no_answer = '%d', system = 'single_box' WHERE name = '%q'", atoi(value), agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-
-	} else if (!strcasecmp(key, "wrap_up_time")) {
-		sql = switch_mprintf("UPDATE agents SET wrap_up_time = '%d', system = 'single_box' WHERE name = '%q'", atoi(value), agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-
-	} else {
-		result = CC_STATUS_INVALID_KEY;
-		goto done;
-
-	}
-
-done:
-	if (result == CC_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Updated Agent %s set %s = %s\n", agent, key, value);
-	}
-
-	return result;
-}
 
 cc_status_t cc_ha_set(const char *key, const char *value)
 {
@@ -1374,126 +738,6 @@ cc_status_t cc_ha_recover()
 	return result;
 }
 
-cc_status_t cc_tier_add(const char *queue_name, const char *agent, const char *state, int level, int position)
-{
-	cc_status_t result = CC_STATUS_SUCCESS;
-	char *sql;
-	cc_queue_t *queue = NULL;
-	if (!(queue = get_queue(queue_name))) {
-		result = CC_STATUS_QUEUE_NOT_FOUND;
-		goto done;
-	} else {
-		queue_rwunlock(queue);
-	}
-
-	if (cc_tier_str2state(state) != CC_TIER_STATE_UNKNOWN) {
-		char res[256] = "";
-		/* Check to see if agent already exist */
-		sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-		switch_safe_free(sql);
-
-		if (atoi(res) == 0) {
-			result = CC_STATUS_AGENT_NOT_FOUND;
-			goto done;
-		}
-
-		/* Check to see if tier already exist */
-		sql = switch_mprintf("SELECT count(*) FROM tiers WHERE agent = '%q' AND queue = '%q'", agent, queue_name);
-		cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-		switch_safe_free(sql);
-
-		if (atoi(res) != 0) {
-			result = CC_STATUS_TIER_ALREADY_EXIST;
-			goto done;
-		}
-
-		/* Add Agent in tier */
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Adding Tier on Queue %s for Agent %s, level %d, position %d\n", queue_name, agent, level, position);
-		sql = switch_mprintf("INSERT INTO tiers (queue, agent, state, level, position) VALUES('%q', '%q', '%q', '%d', '%d');",
-				queue_name, agent, state, level, position);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else {
-		result = CC_STATUS_TIER_INVALID_STATE;
-		goto done;
-
-	}
-
-done:		
-	return result;
-}
-
-cc_status_t cc_tier_update(const char *key, const char *value, const char *queue_name, const char *agent)
-{
-	cc_status_t result = CC_STATUS_SUCCESS;
-	char *sql;
-	char res[256];
-	cc_queue_t *queue = NULL;
-
-	/* Check to see if tier already exist */
-	sql = switch_mprintf("SELECT count(*) FROM tiers WHERE agent = '%q' AND queue = '%q'", agent, queue_name);
-	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-	switch_safe_free(sql);
-
-	if (atoi(res) == 0) {
-		result = CC_STATUS_TIER_NOT_FOUND;
-		goto done;
-	}
-
-	/* Check to see if agent already exist */
-	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
-	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-	switch_safe_free(sql);
-
-	if (atoi(res) == 0) {
-		result = CC_STATUS_AGENT_NOT_FOUND;
-		goto done;
-	}
-
-	if (!(queue = get_queue(queue_name))) {
-		result = CC_STATUS_QUEUE_NOT_FOUND;
-		goto done;
-	} else {
-		queue_rwunlock(queue);
-	}
-
-	if (!strcasecmp(key, "state")) {
-		if (cc_tier_str2state(value) != CC_TIER_STATE_UNKNOWN) {
-			sql = switch_mprintf("UPDATE tiers SET state = '%q' WHERE queue = '%q' AND agent = '%q'", value, queue_name, agent);
-			cc_execute_sql(NULL, sql, NULL);
-			switch_safe_free(sql);
-			result = CC_STATUS_SUCCESS;
-		} else {
-			result = CC_STATUS_TIER_INVALID_STATE;
-			goto done;
-		}
-	} else if (!strcasecmp(key, "level")) {
-		sql = switch_mprintf("UPDATE tiers SET level = '%d' WHERE queue = '%q' AND agent = '%q'", atoi(value), queue_name, agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-
-	} else if (!strcasecmp(key, "position")) {
-		sql = switch_mprintf("UPDATE tiers SET position = '%d' WHERE queue = '%q' AND agent = '%q'", atoi(value), queue_name, agent);
-		cc_execute_sql(NULL, sql, NULL);
-		switch_safe_free(sql);
-
-		result = CC_STATUS_SUCCESS;
-	} else {
-		result = CC_STATUS_INVALID_KEY;
-		goto done;
-	}	
-done:
-	if (result == CC_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Updated tier: Agent %s in Queue %s set %s = %s\n", agent, queue_name, key, value);
-	}
-	return result;
-}
-
 cc_status_t cc_tier_del(const char *queue_name, const char *agent)
 {
 	cc_status_t result = CC_STATUS_SUCCESS;
@@ -1509,75 +753,7 @@ cc_status_t cc_tier_del(const char *queue_name, const char *agent)
 	return result;
 }
 
-static switch_status_t load_agent(const char *agent_name)
-{
-	switch_xml_t x_agents, x_agent, cfg, xml;
 
-	if (!(xml = switch_xml_open_cfg(global_cf, &cfg, NULL))) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Open of %s failed\n", global_cf);
-		return SWITCH_STATUS_FALSE;
-	}
-	if (!(x_agents = switch_xml_child(cfg, "agents"))) {
-		goto end;
-	}
-
-	if ((x_agent = switch_xml_find_child(x_agents, "agent", "name", agent_name))) {
-		const char *type = switch_xml_attr(x_agent, "type");
-		const char *contact = switch_xml_attr(x_agent, "contact"); 
-		const char *status = switch_xml_attr(x_agent, "status");
-		const char *max_no_answer = switch_xml_attr(x_agent, "max-no-answer");
-		const char *wrap_up_time = switch_xml_attr(x_agent, "wrap-up-time");
-		const char *reject_delay_time = switch_xml_attr(x_agent, "reject-delay-time");
-		const char *busy_delay_time = switch_xml_attr(x_agent, "busy-delay-time");
-		const char *no_answer_delay_time = switch_xml_attr(x_agent, "no-answer-delay-time");
-
-		if (type) {
-			cc_status_t res = cc_agent_add(agent_name, type);
-			
-            // For HA, only add new agent, DO NOT update or DELETE.
-            if (res == CC_STATUS_AGENT_ALREADY_EXIST) {
-                goto end;
-            }
-            
-            if (res == CC_STATUS_SUCCESS) {
-				if (contact) {
-					cc_agent_update("contact", contact, agent_name);
-				}
-				if (status) {
-					cc_agent_update("status", status, agent_name);
-				}
-				if (wrap_up_time) {
-					cc_agent_update("wrap_up_time", wrap_up_time, agent_name);
-				}
-				if (max_no_answer) {
-					cc_agent_update("max_no_answer", max_no_answer, agent_name);
-				}
-				if (reject_delay_time) {
-					cc_agent_update("reject_delay_time", reject_delay_time, agent_name);
-				}
-				if (busy_delay_time) {
-					cc_agent_update("busy_delay_time", busy_delay_time, agent_name);
-				}
-				if (no_answer_delay_time) {
-					cc_agent_update("no_answer_delay_time", no_answer_delay_time, agent_name);
-				}
-				/*
-                if (type && res == CC_STATUS_AGENT_ALREADY_EXIST) {
-					cc_agent_update("type", type, agent_name);
-				}*/
-
-			}
-		}
-	}
-
-end:
-
-	if (xml) {
-		switch_xml_free(xml);
-	}
-
-	return SWITCH_STATUS_SUCCESS;
-}
 
 cc_status_t cc_operator_add(const char *operator, const char *agent)
 {
@@ -2936,21 +2112,7 @@ end:
 	return status;
 }
 
-static void playback_array(switch_core_session_t *session, const char *str) {
-	if (str && !strncmp(str, "ARRAY::", 7)) {
-		char *i = (char*) str + 7, *j = i;
-		while (1) {
-			if ((j = strstr(i, "::"))) {
-				*j = 0;
-			}
-			switch_ivr_play_file(session, NULL, i, NULL);
-			if (!j) break;
-			i = j + 2;
-		}
-	} else {
-		switch_ivr_play_file(session, NULL, str, NULL);
-	}
-}
+
 
 static void *SWITCH_THREAD_FUNC outbound_agent_thread_run(switch_thread_t *thread, void *obj)
 {

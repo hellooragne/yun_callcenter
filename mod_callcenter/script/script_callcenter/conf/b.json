@@ -15,10 +15,10 @@
 	],
 	"agent" : [
 		{
-			"name":"1002@default",
+			"name":"1002",
 			"type":"callback",
 			"contact":"",
-			"status":"Available",
+			"status":"CC_AGENT_STATUS_LOGGED_OUT",
 			"max_no_answer":"3",
 			"wrap_up_time":"10",
 			"reject_delay_time":"10",

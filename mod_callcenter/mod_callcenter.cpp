@@ -1019,7 +1019,7 @@ void *SWITCH_THREAD_FUNC cc_agent_dispatch_thread_run(switch_thread_t *thread, v
         
         // CC in slave mode
         if (SWITCH_FALSE == globals.blMaster) {
-            if (magic_feed%100 == 0) {
+            if (magic_feed%10000 == 0) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Callcenter is @slave mode.\n");
             }
             
@@ -1140,13 +1140,13 @@ one_round_check:
         //add by djxie
 		/*printf state 10s*/
 		//if (time_now >= (time_start + 5000000)) {
-        if (magic_feed%600 == 0) {
+        if (magic_feed%60 == 0) {
 
-			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "-----------------------------------------\n");
 			//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "process member number [%d]\n", run_count);
 			//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "dispatch all time %ld\n", end - start);
 
-			get_queue_context();
+			//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "-----------------------------------------\n");
+			//get_queue_context();
 
 			//time_start = gettime();
 		}

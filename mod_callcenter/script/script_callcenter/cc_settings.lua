@@ -2,6 +2,8 @@ json = require('json')
 lfs  = require("lfs")
 utils = require('c_utils')
 
+api = freeswitch.API()
+
 callId = (session == nil) and "0" or session:get_uuid()
 
 local settings = {}
@@ -20,6 +22,10 @@ function get_file_content(file_name)
 end
 
 function load_to_db_init(dbh)
+
+
+	print("load to db init")
+	utils.print_msg("info", callId, "load to db init")
 
 	local sql_vdn = "CREATE TABLE vdn ("
 	.."   name     VARCHAR(255),"
@@ -77,8 +83,8 @@ function load_to_db_init(dbh)
 	.."   no_answer_count INTEGER NOT NULL DEFAULT 0,"
 	.."   calls_answered  INTEGER NOT NULL DEFAULT 0,"
 	.."   talk_time  INTEGER NOT NULL DEFAULT 0,"
-	.."   ready_time INTEGER NOT NULL DEFAULT 0"
-	..");";
+	.."   ready_time INTEGER NOT NULL DEFAULT 0,"
+	.."PRIMARY KEY (`name`));";
 
 	dbh:test_reactive("SELECT count(*) FROM agents", "DROP TABLE agents", sql_agent)
 
@@ -109,6 +115,7 @@ function load_to_db_queue(dbh, config)
 
 		dbh:query(sql)
 
+		api:executeString("callcenter_config queue load "..name)
 	end
 end
 
@@ -124,7 +131,7 @@ function load_to_db_tiers(dbh, config)
 		local level    = value['level']
 		local position = value['position']
 
-		sql = string.format("insert into tiers (queue, agent,  level, position) values ('%s', '%s', '%s', '%s')", queue, agent, level, position);
+		sql = string.format("insert into tiers (queue, agent,  level, position, state) values ('%s', '%s', '%s', '%s', 'Ready')", queue, agent, level, position);
 
 		utils.print_msg("info", callId, sql)
 
@@ -133,6 +140,7 @@ function load_to_db_tiers(dbh, config)
 	end	
 end
 
+local agent_list = {}
 
 function load_to_db_agent(dbh, config)
 
@@ -150,14 +158,13 @@ function load_to_db_agent(dbh, config)
 		local busy_delay_time = value['busy_delay_time']
 
 
-		sql = string.format("insert into agents (name, type,  status, max_no_answer, wrap_up_time,reject_delay_time,busy_delay_time) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s')", name, ntype, status, max_no_answer, wrap_up_time, reject_delay_time, busy_delay_time);
+		sql = string.format("insert into agents (name, type,  status, max_no_answer, wrap_up_time,reject_delay_time,busy_delay_time,state) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s', 'Waiting')", name, ntype, status, max_no_answer, wrap_up_time, reject_delay_time, busy_delay_time);
 
 		utils.print_msg("info", callId, sql)
 
 		dbh:query(sql)
 
 	end	
-
 end
 
 function load_to_db_vdn(dbh, config)
@@ -200,6 +207,9 @@ function load_one_config(dbh, config_name)
 end
 
 function settings.load(dbh, config_path)
+
+
+	utils.print_msg("info", callId, "load to db settings")
 
 	load_to_db_init(dbh)
 

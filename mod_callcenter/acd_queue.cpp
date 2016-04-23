@@ -88,6 +88,76 @@ cc_queue_t *queue_set_config(cc_queue_t *queue)
 
 }
 
+//hmeng
+
+static int queue_callback(void *pArg, int argc, char **argv, char **columnNames) {
+
+	cc_queue_t *queue = NULL;
+	switch_memory_pool_t *pool = NULL;
+
+	if (switch_core_new_memory_pool(&pool) != SWITCH_STATUS_SUCCESS) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Pool Failure\n");
+		goto end;
+	}
+
+	if (!(queue = (cc_queue_t *)switch_core_alloc(pool, sizeof(cc_queue_t)))) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Alloc Failure\n");
+		switch_core_destroy_memory_pool(&pool);
+		goto end;
+	}
+
+	queue->pool = pool;
+	queue_set_config(queue);
+
+
+	char *record_template;
+
+	queue->name = switch_core_strdup(queue->pool, argv[0]);
+	queue->strategy = switch_core_strdup(queue->pool, argv[1]);
+	queue->moh = switch_core_strdup(queue->pool, argv[2]);
+	queue->time_base_score = switch_core_strdup(queue->pool, argv[3]);
+	queue->max_wait_time = atoi(argv[4]);
+	queue->max_wait_time_with_no_agent = atoi(argv[5]);
+	queue->max_wait_time_with_no_agent_time_reached = atoi(argv[6]);
+
+	queue->tier_rules_apply = (switch_bool_t)switch_true(argv[7]);
+	queue->discard_abandoned_after = atoi(argv[8]);
+	queue->abandoned_resume_allowed = (switch_bool_t)switch_true(argv[9]);
+	
+	queue->record_template = NULL;
+	queue->tier_rule_wait_second = 0;
+	queue->tier_rule_wait_multiply_level = SWITCH_FALSE;
+    queue->tier_rule_no_agent_no_wait = SWITCH_TRUE;
+
+	queue->last_agent_exist = 0;
+	queue->last_agent_exist_check = 0;
+
+	switch_thread_rwlock_create(&queue->rwlock, pool);
+
+	switch_mutex_init(&queue->mutex, SWITCH_MUTEX_NESTED, queue->pool);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Added queue %s\n", queue->name);
+	switch_core_hash_insert(globals.queue_hash, queue->name, queue);
+
+end:
+	return 0;
+}
+
+cc_queue_t *load_queue(const char *queue_name) {
+
+    char *sql = NULL;
+    
+	sql = switch_mprintf("SELECT name, strtegy, moh_sound, time_base_score, max_wait_time,max_wait_time_with_no_agent, max_wait_time_with_no_agent_time_reached,tier_rules_apply,discard_abandoned_after,abandoned_resume_allowed from cc_queue where name = '%s'", queue_name);
+
+    cc_execute_sql_callback(NULL, NULL, sql, queue_callback, NULL);
+    switch_safe_free(sql);
+
+
+	cc_queue_t *queue = NULL;
+
+	return queue;
+}
+
+#if 0
 cc_queue_t *load_queue(const char *queue_name)
 {
 	cc_queue_t *queue = NULL;
@@ -151,6 +221,7 @@ end:
 	}
 	return queue;
 }
+#endif
 
 cc_queue_t *get_queue(const char *queue_name)
 {

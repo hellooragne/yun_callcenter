@@ -11,8 +11,7 @@ switch_time_t local_epoch_time_now(switch_time_t *t)
 	return now;
 }
 
-switch_cache_db_handle_t *cc_get_db_handle(void)
-{
+switch_cache_db_handle_t *cc_get_db_handle(void) {
 	switch_cache_db_handle_t *dbh = NULL;
 	char *dsn;
 	
@@ -27,7 +26,6 @@ switch_cache_db_handle_t *cc_get_db_handle(void)
 	}
 	
 	return dbh;
-
 }
 
 void playback_array(switch_core_session_t *session, const char *str) {
@@ -46,8 +44,7 @@ void playback_array(switch_core_session_t *session, const char *str) {
 	}
 }
 
-char *cc_execute_sql2str(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, char *resbuf, size_t len)
-{
+char *cc_execute_sql2str(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, char *resbuf, size_t len) {
 	char *ret = NULL;
 
 	switch_cache_db_handle_t *dbh = NULL;
@@ -78,8 +75,7 @@ end:
 }
 
 
-switch_status_t cc_execute_sql(cc_queue_t *queue, char *sql, switch_mutex_t *mutex)
-{
+switch_status_t cc_execute_sql(cc_queue_t *queue, char *sql, switch_mutex_t *mutex) {
 	switch_cache_db_handle_t *dbh = NULL;
 	switch_status_t status = SWITCH_STATUS_FALSE;
 
@@ -110,8 +106,7 @@ end:
 }
 
 
-switch_bool_t cc_execute_sql_callback(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, switch_core_db_callback_func_t callback, void *pdata)
-{
+switch_bool_t cc_execute_sql_callback(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, switch_core_db_callback_func_t callback, void *pdata) {
 	switch_bool_t ret = SWITCH_FALSE;
 	char *errmsg = NULL;
 	switch_cache_db_handle_t *dbh = NULL;
@@ -149,8 +144,7 @@ end:
 
 
 // DO NOT use this function. This is for checking data inside coredb ONLY. Add by Tom LIANG.
-char *cc_coredb_execute_sql2str(switch_mutex_t *mutex, char *sql, char *resbuf, size_t len)
-{
+char *cc_coredb_execute_sql2str(switch_mutex_t *mutex, char *sql, char *resbuf, size_t len) {
 	char *ret = NULL;
 
 	switch_cache_db_handle_t *dbh = NULL;
@@ -184,13 +178,11 @@ end:
 
 
 //add by djxie
-unsigned int get_waiting_members_count(const char *queue_name)
-{
+unsigned int get_waiting_members_count(const char *queue_name) {
 	char res[256] = {0};
 	char *sql;
 
-	if (!queue_name)
-	{
+	if (!queue_name) {
 		return 0;
 	}
 
@@ -203,8 +195,7 @@ unsigned int get_waiting_members_count(const char *queue_name)
 	return atoi(res);
 }
 
-unsigned int get_trying_members_count(const char *queue_name)
-{
+unsigned int get_trying_members_count(const char *queue_name) {
 	char res[256] = {0};
 	char *sql;
 
@@ -222,13 +213,11 @@ unsigned int get_trying_members_count(const char *queue_name)
 	return atoi(res);
 }
 
-unsigned int get_answered_members_count(const char *queue_name)
-{
+unsigned int get_answered_members_count(const char *queue_name) {
 	char res[256] = {0};
 	char *sql;
 
-	if (!queue_name)
-	{
+	if (!queue_name) {
 		return 0;
 	}
 
@@ -241,13 +230,11 @@ unsigned int get_answered_members_count(const char *queue_name)
 	return atoi(res);
 }
 
-unsigned int get_available_agents_count(const char *queue_name)
-{
+unsigned int get_available_agents_count(const char *queue_name) {
 	char res[256] = {0};
 	char *sql;
 
-	if (!queue_name)
-	{
+	if (!queue_name) {
 		return 0;
 	}
 
@@ -267,16 +254,14 @@ unsigned int get_available_agents_count(const char *queue_name)
 }
 
 
-void get_queue_context()
-{
+void get_queue_context() {
 	switch_hash_index_t *hi;
 
 	switch_mutex_lock(globals.mutex);
     
     //switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "-----------------------------------------\n");
     
-	for (hi = switch_hash_first(NULL, globals.queue_hash); hi; hi = switch_hash_next(hi)) 
-	{
+	for (hi = switch_hash_first(NULL, globals.queue_hash); hi; hi = switch_hash_next(hi)) {
 		void *val = NULL;
 		unsigned int waiting_members_count;
 		unsigned int trying_members_count;
@@ -303,8 +288,7 @@ void get_queue_context()
 	switch_mutex_unlock(globals.mutex);
 }
 
-void get_queue_context_cli(switch_stream_handle_t *stream, char *queuename)
-{
+void get_queue_context_cli(switch_stream_handle_t *stream, char *queuename) {
 	switch_hash_index_t *hi;
     switch_bool_t  blQueue = SWITCH_FALSE;
     
@@ -316,8 +300,7 @@ void get_queue_context_cli(switch_stream_handle_t *stream, char *queuename)
     
     stream->write_function(stream, "-----------------------------------------\n");
     
-	for (hi = switch_hash_first(NULL, globals.queue_hash); hi; hi = switch_hash_next(hi)) 
-	{
+	for (hi = switch_hash_first(NULL, globals.queue_hash); hi; hi = switch_hash_next(hi)) {
 		void *val = NULL;
 		unsigned int waiting_members_count;
 		unsigned int trying_members_count;

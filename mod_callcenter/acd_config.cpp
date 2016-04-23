@@ -1,4 +1,7 @@
 #include "acd_config.h"
+#include <string>
+
+using namespace std;
 
 #define CC_CONFIG_API_SYNTAX "callcenter_config <target> <args>,\n"\
 "\tcallcenter_config agent add [name] [type] | \n" \
@@ -579,6 +582,28 @@ done:
 	return result;
 }
 
+
+//hmeng
+cc_status_t cc_operator_logon(const char *operators, const char *agent) {
+
+	cc_status_t cc_status;
+	cc_status = cc_agent_update("status", "LoggedOn", operators);
+
+	string contact = "[call_timeout=100]user/"+string(agent);
+	cc_status = cc_agent_update("contact", (const char *)contact.c_str(), operators);
+
+	return cc_status;
+}
+
+cc_status_t cc_operator_logout(const char *operators, const char *agent) {
+
+	cc_agent_update("status", "LoggedOut", operators);
+	cc_agent_update("contact", "", operators);
+
+	return CC_STATUS_SUCCESS;
+}
+
+#if 0
 cc_status_t cc_operator_logon(const char *operators, const char *agent)
 {
 	cc_status_t result = CC_STATUS_SUCCESS;
@@ -757,6 +782,8 @@ done:
 
 	return result;
 }
+
+#endif
 
 static switch_status_t load_operator(const char *operators)
 {
@@ -1604,6 +1631,49 @@ int list_result_callback(void *pArg, int argc, char **argv, char **columnNames)
 	return 0;
 }
 
+
+//hmeng
+
+static int load_queue_callback(void *pArg, int argc, char **argv, char **columnNames) {
+	load_queue(argv[0]);
+}
+
+switch_status_t load_config(void) {
+
+	switch_xml_t cfg, xml, settings, param, x_queues, x_queue, x_agents, x_agent, x_operators, x_operator, x_vdns, x_vdn;
+
+
+	if (!(xml = switch_xml_open_cfg(global_cf, &cfg, NULL))) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Open of %s failed\n", global_cf);
+		/*FIXME*/
+	}
+
+
+	switch_mutex_lock(globals.mutex);
+	if ((settings = switch_xml_child(cfg, "settings"))) {
+		for (param = switch_xml_child(settings, "param"); param; param = param->next) {
+			char *var = (char *) switch_xml_attr_soft(param, "name");
+			char *val = (char *) switch_xml_attr_soft(param, "value");
+
+			if (!strcasecmp(var, "debug")) {
+				globals.debug = atoi(val);
+			} else if (!strcasecmp(var, "dbname")) {
+				globals.dbname = strdup(val);
+			} else if (!strcasecmp(var, "odbc-dsn")) {
+				globals.odbc_dsn = strdup(val);
+			}
+		}
+	}
+	switch_mutex_unlock(globals.mutex);
+
+	char *sql = "SELECT name from cc_queue";
+
+    cc_execute_sql_callback(NULL, NULL, sql, load_queue_callback, NULL);
+
+	return SWITCH_STATUS_SUCCESS;
+}
+
+#if 0
 switch_status_t load_config(void)
 {
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
@@ -1632,6 +1702,7 @@ switch_status_t load_config(void)
 			}
 		}
 	}
+
 	if (!globals.dbname) {
 		globals.dbname = strdup(CC_SQLITE_DB_NAME);
 	}
@@ -1756,6 +1827,7 @@ end:
 
 	return status;
 }
+#endif
 
 
 SWITCH_STANDARD_API(cc_config_api_function)
@@ -1787,6 +1859,13 @@ SWITCH_STANDARD_API(cc_config_api_function)
 
 	section = argv[0];
 	action = argv[1];
+
+
+	//hmeng
+	if (section && !strcasecmp(section, "ccdebug")) {
+
+		get_queue_context();
+	}
 
 	if (section && !strcasecmp(section, "agent")) {
 		if (action && !strcasecmp(action, "add")) {
@@ -2008,13 +2087,16 @@ SWITCH_STANDARD_API(cc_config_api_function)
 		}
 	} else if (section && !strcasecmp(section, "queue")) {
 		if (action && !strcasecmp(action, "load")) {
-			//hmeng
 			if (argc-initial_argc < 1) {
 				stream->write_function(stream, "%s", "-ERR Invalid!\n");
 				goto done;
 			} else {
 				const char *queue_name = argv[0 + initial_argc];
 				cc_queue_t *queue = NULL;
+
+				//hmeng
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "callcenter queue load %s\n", queue_name);
+
 				if ((queue = get_queue(queue_name))) {
 					queue_rwunlock(queue);
 					stream->write_function(stream, "%s", "+OK\n");
@@ -2022,7 +2104,6 @@ SWITCH_STANDARD_API(cc_config_api_function)
 					stream->write_function(stream, "%s", "-ERR Invalid Queue not found!\n");
 				}
 			}
-
 		} else if (action && !strcasecmp(action, "unload")) {
 			if (argc-initial_argc < 1) {
 				stream->write_function(stream, "%s", "-ERR Invalid!\n");
@@ -2221,6 +2302,7 @@ SWITCH_STANDARD_API(cc_config_api_function)
 				const char *operators = argv[1 + initial_argc];
 				const char *value = argv[2 + initial_argc];
                 
+				
                 if (argc-initial_argc == 2) {
                     value = "";
                 }

@@ -48,4 +48,7 @@ unsigned int get_available_agents_count(const char *queue_name);
 void get_queue_context();
 
 void get_queue_context_cli(switch_stream_handle_t *stream, char *queuename);
+
+switch_bool_t is_master();
+
 #endif

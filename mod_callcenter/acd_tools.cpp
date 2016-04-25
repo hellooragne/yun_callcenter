@@ -1,5 +1,21 @@
 #include "acd_tools.h"
 
+#include <stdio.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+
+#include <stdio.h>      
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <netinet/in.h> 
+#include <string.h> 
+#include <arpa/inet.h>
+
+
 
 /* TODO This is temporary until we either move it to the core, or use it differently in the module */
 switch_time_t local_epoch_time_now(switch_time_t *t)
@@ -245,6 +261,8 @@ unsigned int get_available_agents_count(const char *queue_name) {
 			" AND agents.state = 'Waiting'"
 			" And tiers.state = 'Ready'",
 			queue_name);
+    	
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, sql);
 
 	cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
 
@@ -340,3 +358,40 @@ void get_queue_context_cli(switch_stream_handle_t *stream, char *queuename) {
 	switch_mutex_unlock(globals.mutex);
 }
 //end add by djxie
+
+
+switch_bool_t is_master() {
+    struct ifaddrs * ifAddrStruct=NULL;
+    void * tmpAddrPtr=NULL;
+
+    getifaddrs(&ifAddrStruct);
+
+    while (ifAddrStruct!=NULL) {
+        if (ifAddrStruct->ifa_addr->sa_family==AF_INET) { // check it is IP4
+            // is a valid IP4 Address
+            tmpAddrPtr=&((struct sockaddr_in *)ifAddrStruct->ifa_addr)->sin_addr;
+            char addressBuffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+
+	    if (!strcmp(switch_core_get_domain(SWITCH_FALSE), addressBuffer)) {
+		return SWITCH_TRUE;
+	    }
+
+            //switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "%s IP Address %s\n", ifAddrStruct->ifa_name, addressBuffer);
+        } else if (ifAddrStruct->ifa_addr->sa_family==AF_INET6) { // check it is IP6
+            // is a valid IP6 Address
+            tmpAddrPtr=&((struct sockaddr_in *)ifAddrStruct->ifa_addr)->sin_addr;
+            char addressBuffer[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, tmpAddrPtr, addressBuffer, INET6_ADDRSTRLEN);
+
+            //switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "%s IP Address %s\n", ifAddrStruct->ifa_name, addressBuffer);
+
+	    if (!strcmp(switch_core_get_domain(SWITCH_FALSE), addressBuffer)) {
+		return SWITCH_TRUE;
+	    }
+        }
+        ifAddrStruct = ifAddrStruct->ifa_next;
+    }
+
+    return SWITCH_FALSE;
+}

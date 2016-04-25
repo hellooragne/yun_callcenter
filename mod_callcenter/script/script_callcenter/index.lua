@@ -29,13 +29,13 @@ local p = "/node_modules/config_callout_control/fs_conf/"
 
 if action == 'reload' then
 	utils.print_msg("info", callId, "load to db init")
-	settings.load(dbh, '/usr/local/freeswitch/scripts/script_callcenter/conf/')
+	settings.load(dbh, '/usr/local/freeswitch/scripts/config_callcenter/conf/')
 elseif action == 'vdn_to_queue' then
 	cc_state.vdn_get_queue(dbh, argv[2])
 else
-	utils.print_msg("info", callId, 'lua CALLOUT_CONTROL/index.lua  reload ')
-	utils.print_msg("info", callId, 'lua CALLOUT_CONTROL/index.lua  lreload ')
-	utils.print_msg("info", callId, 'lua CALLOUT_CONTROL/index.lua  authority [agent] [ability]')
-	utils.print_msg("info", callId, 'lua CALLOUT_CONTROL/index.lua  route     [agent]')
-	utils.print_msg("info", callId, 'lua CALLOUT_CONTROL/index.lua  show      [agent]')
+	utils.print_msg("info", callId, 'lua config_callcenter/index.lua  reload ')
+	utils.print_msg("info", callId, 'lua config_callcenter/index.lua  lreload ')
+	utils.print_msg("info", callId, 'lua config_callcenter/index.lua  authority [agent] [ability]')
+	utils.print_msg("info", callId, 'lua config_callcenter/index.lua  route     [agent]')
+	utils.print_msg("info", callId, 'lua config_callcenter/index.lua  show      [agent]')
 end

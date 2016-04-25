@@ -1016,33 +1016,19 @@ void *SWITCH_THREAD_FUNC cc_agent_dispatch_thread_run(switch_thread_t *thread, v
             magic_feed = 0xff;
         }
         magic_feed++;
-        
-        // CC in slave mode
-        if (SWITCH_FALSE == globals.blMaster) {
-            if (magic_feed%10000 == 0) {
+
+
+	/*hmeng*/
+	if (is_master() == SWITCH_FALSE) {
+
+	    if (magic_feed%10000 == 0) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Callcenter is @slave mode.\n");
             }
             
             switch_yield(100000);
             continue;
-        } else {
-            /* Check to see the system has already do HA without CC knows */
-            sql = switch_mprintf("SELECT count(*) FROM cc_flags WHERE name = '%q' AND value = '%q'", MASTER_NODE, switch_core_get_switchname());
-            cc_execute_sql2str(NULL, NULL, sql, res, sizeof(res));
-            switch_safe_free(sql);
-
-            if (atoi(res) == 0) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "SYSTEM HA occured without notifying CC, Callcenter has to transfer to @slave mode.\n");
-                
-                // UPDATE this tuple
-                switch_mutex_lock(globals.mutex);
-                globals.blMaster = SWITCH_FALSE;
-                switch_mutex_unlock(globals.mutex);
-                
-                continue;   // this CC already transfered to @slave state
-            }
-
-        }
+	}
+        
         
         // get queue list
         memset(&queues[0], 0, sizeof(queues));

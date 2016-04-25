@@ -1638,6 +1638,7 @@ static int load_queue_callback(void *pArg, int argc, char **argv, char **columnN
 	load_queue(argv[0]);
 }
 
+#if 1
 switch_status_t load_config(void) {
 
 	switch_xml_t cfg, xml, settings, param, x_queues, x_queue, x_agents, x_agent, x_operators, x_operator, x_vdns, x_vdn;
@@ -1664,14 +1665,32 @@ switch_status_t load_config(void) {
 			}
 		}
 	}
+
+
+	if (!globals.odbc_dsn) {
+		globals.odbc_dsn = strdup("freeswitch::");
+	}
+
 	switch_mutex_unlock(globals.mutex);
 
 	char *sql = "SELECT name from cc_queue";
 
-    cc_execute_sql_callback(NULL, NULL, sql, load_queue_callback, NULL);
+    	cc_execute_sql_callback(NULL, NULL, sql, load_queue_callback, NULL);
+
+	switch_cache_db_handle_t *dbh = NULL;
+
+	if (!(dbh = cc_get_db_handle())) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Cannot open DB!\n");
+		return SWITCH_STATUS_TERM;
+	}
+
+	switch_cache_db_test_reactive(dbh, "select count(session_uuid) from members", "drop table members", members_sql);
+
 
 	return SWITCH_STATUS_SUCCESS;
 }
+
+#endif
 
 #if 0
 switch_status_t load_config(void)

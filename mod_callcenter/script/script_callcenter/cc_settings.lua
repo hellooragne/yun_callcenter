@@ -158,7 +158,7 @@ function load_to_db_agent(dbh, config)
 		local busy_delay_time = value['busy_delay_time']
 
 
-		sql = string.format("insert into agents (name, type,  status, max_no_answer, wrap_up_time,reject_delay_time,busy_delay_time,state) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s', 'Waiting')", name, ntype, status, max_no_answer, wrap_up_time, reject_delay_time, busy_delay_time);
+		sql = string.format("insert into agents (name, type,  status, max_no_answer, wrap_up_time,reject_delay_time,busy_delay_time,state) select '%s', '%s', '%s', '%s', '%s', '%s', '%s', 'Waiting' from DUAL WHERE NOT EXISTS(SELECT name FROM agents WHERE name = '%s')", name, ntype, status, max_no_answer, wrap_up_time, reject_delay_time, busy_delay_time, name);
 
 		utils.print_msg("info", callId, sql)
 
